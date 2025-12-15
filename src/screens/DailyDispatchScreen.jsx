@@ -96,6 +96,28 @@ const DailyDispatchScreen = () => {
         <View style={styles.infoRowContainer}>
           <View style={styles.infoRowHalf}>
             <Ionicons
+              name="person-circle-outline"
+              size={16}
+              color={colors.primary}
+            />
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>Name</Text>
+              <Text style={styles.infoValue}>{item.name}</Text>
+            </View>
+          </View>
+
+          <View style={styles.infoRowHalf}>
+            <Ionicons name="call-outline" size={16} color={colors.primary} />
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>Contact</Text>
+              <Text style={styles.infoValue}>{item.contact_no}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.infoRowContainer}>
+          <View style={styles.infoRowHalf}>
+            <Ionicons
               name="document-text-outline"
               size={16}
               color={colors.primary}

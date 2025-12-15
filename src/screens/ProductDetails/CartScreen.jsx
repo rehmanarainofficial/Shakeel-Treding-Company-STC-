@@ -20,13 +20,13 @@ const CartScreen = ({ navigation }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState('');
   const [contactNo, setContactNo] = useState('');
-  const [documentType, setDocumentType] = useState('Order');
+  const [documentType, setDocumentType] = useState('Quotation');
 
   useEffect(() => {
     if (customerInfo) {
       setName(customerInfo.name || '');
       setContactNo(customerInfo.contactNo || '');
-      setDocumentType(customerInfo.documentType || 'Order');
+      setDocumentType(customerInfo.documentType || 'Quotation');
     }
   }, [customerInfo]);
 
@@ -392,7 +392,7 @@ const CartScreen = ({ navigation }) => {
                 <TouchableOpacity
                   style={styles.radioButton}
                   onPress={() => setDocumentType('Order')}
-                  disabled={isSubmitting}
+                  disabled={true}
                 >
                   <View style={styles.radioOuter}>
                     {documentType === 'Order' && (

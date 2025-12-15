@@ -41,51 +41,43 @@ const Dashboard = () => {
 
   const dashboardCards = [
     {
+      id: 1,
+      title: 'Pending Issue Order',
+      icon: 'pending-actions',
+      color: colors.danger,
+      screen: 'OrderScreen',
+    },
+    {
       id: 2,
-      title: 'Upload Pic',
-      icon: 'cloud-upload',
-      value: '45',
-      subtitle: 'Files uploaded',
+      title: 'Daily Dispatched',
+      icon: 'local-shipping',
       color: colors.success,
-      screen: 'UploadPicScreen',
+      screen: 'DailyDispatchScreen',
     },
     {
       id: 3,
       title: 'Receivable',
-      icon: 'payments',
-      value: '84,560',
-      subtitle: 'Pending amount',
+      icon: 'account-balance-wallet',
       color: colors.chart,
-      screen: 'Receivable',
-    },
-    {
-      id: 1,
-      title: 'Payable',
-      icon: 'money-off',
-      value: '1,234',
-      subtitle: 'Items in stock',
-      color: colors.primary,
-      screen: 'Payable',
+      screen: 'ReceivableReportScreen',
     },
     {
       id: 4,
-      title: 'Cash/Bank',
-      icon: 'account-balance',
-      value: '2,45,780',
-      subtitle: 'Available balance',
-      color: colors.primaryLight,
+      title: 'Today Sale',
+      icon: 'trending-up',
+      color: colors.primary,
       screen: 'CashBank',
     },
   ];
 
   const quickActions = [
-    { id: 1, title: 'Order', icon: 'shopping-cart', screen: 'OrderScreen' },
     {
-      id: 2,
+      id: 1,
       title: 'Quotation',
       icon: 'description',
       screen: 'InquiryScreen',
     },
+    { id: 2, title: 'Order', icon: 'shopping-cart', screen: 'OrderScreen' },
   ];
 
   const handleCardPress = screenName => {
@@ -247,9 +239,7 @@ const Dashboard = () => {
                       <Icon name={card.icon} size={24} color={card.color} />
                     </View>
                   </View>
-                  <Text style={styles.cardValue}>{card.value}</Text>
                   <Text style={styles.cardTitle}>{card.title}</Text>
-                  <Text style={styles.cardSubtitle}>{card.subtitle}</Text>
                 </TouchableOpacity>
               </Animated.View>
             ))}
@@ -263,35 +253,19 @@ const Dashboard = () => {
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.activityList}>
-            {[1, 2, 3].map(item => (
-              <Animated.View key={item} style={styles.activityItemWrapper}>
-                <View style={styles.activityItem}>
-                  <View style={styles.activityIcon}>
-                    <Icon
-                      name="check-circle"
-                      size={20}
-                      color={colors.success}
-                    />
-                  </View>
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>
-                      Order #{1000 + item} completed
-                    </Text>
-                    <Text style={styles.activityTime}>2 hours ago</Text>
-                  </View>
-                  <Text style={styles.activityAmount}>+{item * 2500}</Text>
-                </View>
-              </Animated.View>
-            ))}
-          </View>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <TouchableOpacity
+            style={styles.uploadButton}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('UploadPicScreen')}
+          >
+            <View style={styles.uploadButtonContent}>
+              <View style={styles.uploadIcon}>
+                <Icon name="cloud-upload" size={32} color={colors.primary} />
+              </View>
+              <Text style={styles.uploadButtonText}>Upload Pic</Text>
+            </View>
+          </TouchableOpacity>
         </Animated.View>
 
         <View style={styles.bottomPadding} />
@@ -517,6 +491,30 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  uploadButton: {
+    backgroundColor: colors.card,
+    borderRadius: 15,
+    padding: 20,
+    width: '100%',
+  },
+  uploadButtonContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  uploadButtonText: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '600',
   },
   bottomPadding: {
     height: 30,

@@ -22,7 +22,8 @@ const CustomHeader = ({
       colors={[colors.primary, colors.primaryDark]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.gradientContainer}>
+      style={styles.gradientContainer}
+    >
       <View style={styles.header}>
         {/* Left Side */}
         <View style={styles.headerLeft}>
@@ -30,7 +31,8 @@ const CustomHeader = ({
             <TouchableOpacity
               style={styles.backButton}
               onPress={onBackPress}
-              activeOpacity={0.7}>
+              activeOpacity={0.7}
+            >
               <Ionicons name="chevron-back" size={26} color="#fff" />
             </TouchableOpacity>
           )}
@@ -40,7 +42,8 @@ const CustomHeader = ({
         <Animated.Text
           entering={FadeInDown.duration(400)}
           numberOfLines={1}
-          style={styles.headerTitle}>
+          style={styles.headerTitle}
+        >
           {title}
         </Animated.Text>
 

@@ -476,7 +476,7 @@ const ProductCard = ({ product, onCardPress, onUploadPress, formatNumber }) => (
         <DetailItem label="Boxes" value={formatNumber(product.boxes)} />
         <DetailItem
           label="SQ Price"
-          value={`Rs. ${formatNumber(product.sq_price)}`}
+          value={`${formatNumber(product.sq_price)}`}
         />
       </View>
       <View style={styles.detailRow}>

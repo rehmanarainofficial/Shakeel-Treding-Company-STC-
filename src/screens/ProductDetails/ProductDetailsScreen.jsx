@@ -189,7 +189,7 @@ const ProductDetailsScreen = ({ route, navigation }) => {
           <View style={styles.detailsGrid}>
             <DetailBox label="Pieces" value={basicInfo.Pcs} />
             <DetailBox label="Boxes" value={basicInfo.boxes} />
-            <DetailBox label="SQ Price" value={`Rs. ${basicInfo.sq_price}`} />
+            <DetailBox label="SQ Price" value={`${basicInfo.sq_price}`} />
             <DetailBox label="Packing" value={basicInfo.packing} />
             <DetailBox label="Units" value={basicInfo.units} />
             <DetailBox label="UOM" value={basicInfo.units} />

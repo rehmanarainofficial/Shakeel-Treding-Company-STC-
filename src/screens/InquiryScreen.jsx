@@ -100,7 +100,7 @@ const InquiryScreen = ({ navigation }) => {
 
     if (isNaN(numAmount)) return 'Invalid amount';
 
-    return `Rs ${numAmount.toLocaleString('en-PK', {
+    return `${numAmount.toLocaleString('en-PK', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;

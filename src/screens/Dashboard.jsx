@@ -53,7 +53,7 @@ const Dashboard = () => {
       id: 3,
       title: 'Receivable',
       icon: 'payments',
-      value: '₹84,560',
+      value: '84,560',
       subtitle: 'Pending amount',
       color: colors.chart,
       screen: 'Receivable',
@@ -71,7 +71,7 @@ const Dashboard = () => {
       id: 4,
       title: 'Cash/Bank',
       icon: 'account-balance',
-      value: '₹2,45,780',
+      value: '2,45,780',
       subtitle: 'Available balance',
       color: colors.primaryLight,
       screen: 'CashBank',
@@ -287,7 +287,7 @@ const Dashboard = () => {
                     </Text>
                     <Text style={styles.activityTime}>2 hours ago</Text>
                   </View>
-                  <Text style={styles.activityAmount}>+₹{item * 2500}</Text>
+                  <Text style={styles.activityAmount}>+{item * 2500}</Text>
                 </View>
               </Animated.View>
             ))}

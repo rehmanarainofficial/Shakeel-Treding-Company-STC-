@@ -24,11 +24,11 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { API_URL } from '@env';
 
 const ScannerScreen = () => {
-  const [hasPermission, setHasPermission] = useState(null); // Start with null
+  const [hasPermission, setHasPermission] = useState(null); 
   const [cameraStatus, setCameraStatus] = useState('Initializing scanner...');
   const [isScanning, setIsScanning] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [isCameraActive, setIsCameraActive] = useState(false); // Start with false
+  const [isCameraActive, setIsCameraActive] = useState(false); 
   const [isFlashOn, setIsFlashOn] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualInput, setManualInput] = useState('');
@@ -43,16 +43,13 @@ const ScannerScreen = () => {
   const cameraRef = useRef(null);
   const textInputRef = useRef(null);
 
-  // ✅ App State Listener
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appState.match(/inactive|background/) && nextAppState === 'active') {
-        // App came to foreground
         if (hasPermission) {
           setIsCameraActive(true);
         }
       } else if (nextAppState.match(/inactive|background/)) {
-        // App going to background
         setIsCameraActive(false);
       }
       setAppState(nextAppState);
@@ -63,7 +60,6 @@ const ScannerScreen = () => {
     };
   }, [appState, hasPermission]);
 
-  // ✅ Simple and reliable vibration feedback
   const playBeepSound = useCallback(() => {
     try {
       const vibrationPattern = Platform.OS === 'ios' ? 100 : 200;
@@ -73,7 +69,6 @@ const ScannerScreen = () => {
     }
   }, []);
 
-  // ✅ Custom Alert Modal
   const showCustomAlertModal = useCallback((title, message, onConfirm) => {
     setAlertConfig({
       title,
@@ -83,7 +78,6 @@ const ScannerScreen = () => {
     setShowCustomAlert(true);
   }, []);
 
-  // ✅ Camera lifecycle management
   useFocusEffect(
     React.useCallback(() => {
       if (hasPermission === true) {
@@ -98,7 +92,6 @@ const ScannerScreen = () => {
     }, [hasPermission]),
   );
 
-  // ✅ Auto focus input when modal opens
   useEffect(() => {
     if (showManualInput && textInputRef.current) {
       setTimeout(() => {
@@ -107,7 +100,6 @@ const ScannerScreen = () => {
     }
   }, [showManualInput]);
 
-  // ✅ Back button handle karein
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
@@ -128,13 +120,11 @@ const ScannerScreen = () => {
     return () => backHandler.remove();
   }, [loading, showManualInput, searchLoading, showCustomAlert]);
 
-  /** ✅ Request camera permission with delay */
   useEffect(() => {
     if (hasInitialized) return;
 
     const initializeCamera = async () => {
       try {
-        // Wait a bit for the app to fully mount
         await new Promise(resolve => setTimeout(resolve, 500));
 
         setCameraStatus('Requesting camera permission...');
@@ -165,7 +155,6 @@ const ScannerScreen = () => {
       }
     };
 
-    // Initialize only when component is mounted
     const timer = setTimeout(() => {
       initializeCamera();
     }, 1000);
@@ -173,12 +162,10 @@ const ScannerScreen = () => {
     return () => clearTimeout(timer);
   }, [hasInitialized, showCustomAlertModal]);
 
-  /** ✅ Flash Toggle Function */
   const toggleFlash = useCallback(() => {
     setIsFlashOn(!isFlashOn);
   }, [isFlashOn]);
 
-  /** ✅ API Call Function with Better Error Handling */
   const fetchProductData = useCallback(
     async (stockId, source = 'scan') => {
       try {
@@ -205,14 +192,12 @@ const ScannerScreen = () => {
           throw new Error('Empty response from server');
         }
 
-        // ✅ Extract JSON from response
         let jsonString = responseText;
         if (responseText.includes('/') && responseText.includes('{')) {
           const jsonStartIndex = responseText.indexOf('{');
           jsonString = responseText.substring(jsonStartIndex);
         }
 
-        // ✅ Try to parse JSON
         let data;
         try {
           data = JSON.parse(jsonString);
@@ -233,7 +218,6 @@ const ScannerScreen = () => {
           }
         }
 
-        // ✅ Response structure check karein
         if (data && (data.status === 'true' || data.status_basic === 'true')) {
           setTimeout(() => {
             setShowManualInput(false);
@@ -244,7 +228,6 @@ const ScannerScreen = () => {
             });
           }, 1000);
         } else {
-          // ✅ Data nahi mila - navigate nahi karenge
           showCustomAlertModal(
             'Product Not Found',
             `No product found with Stock ID: "${stockId}"`,
@@ -276,7 +259,6 @@ const ScannerScreen = () => {
     [navigation, showCustomAlertModal],
   );
 
-  /** ✅ Extract stock_id from scanned data */
   const extractStockId = useCallback(scannedData => {
     const stockIdPattern = /\b\d{3}-\d{4}\b/;
     const match = scannedData.match(stockIdPattern);
@@ -286,7 +268,6 @@ const ScannerScreen = () => {
     return null;
   }, []);
 
-  /** ✅ Smart Manual Input Handler */
   const handleManualInputChange = useCallback(text => {
     const numbersOnly = text.replace(/[^\d]/g, '');
     if (numbersOnly.length > 7) return;
@@ -309,7 +290,6 @@ const ScannerScreen = () => {
     }
   }, [manualInput, fetchProductData, showCustomAlertModal]);
 
-  /** ✅ QR scanner with Beep Sound */
   const codeScanner = useCodeScanner({
     codeTypes: ['qr', 'code-128', 'ean-13'],
     onCodeScanned: useCallback(
@@ -317,7 +297,6 @@ const ScannerScreen = () => {
         if (codes[0]?.value && isScanning && !loading && hasPermission) {
           const scannedValue = codes[0].value;
 
-          // ✅ Beep sound play karo
           playBeepSound();
 
           setIsScanning(false);
@@ -346,14 +325,12 @@ const ScannerScreen = () => {
     ),
   });
 
-  /** ✅ Close Manual Input */
   const closeManualInput = useCallback(() => {
     setShowManualInput(false);
     setManualInput('');
     Keyboard.dismiss();
   }, []);
 
-  /** ✅ Custom Alert Modal Component */
   const CustomAlertModal = useCallback(
     () => (
       <Modal
@@ -385,7 +362,6 @@ const ScannerScreen = () => {
     [showCustomAlert, alertConfig],
   );
 
-  /** ✅ Retry Camera Permission */
   const retryCameraPermission = useCallback(async () => {
     try {
       setCameraStatus('Requesting camera permission...');
@@ -409,7 +385,6 @@ const ScannerScreen = () => {
     }
   }, [showCustomAlertModal]);
 
-  /** ✅ Camera not available UI */
   if (hasPermission === null) {
     return (
       <View style={styles.center}>

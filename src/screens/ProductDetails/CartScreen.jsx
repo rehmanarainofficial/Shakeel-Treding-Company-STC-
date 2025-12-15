@@ -105,8 +105,6 @@ const CartScreen = ({ navigation }) => {
         document_type: documentType,
       };
 
-      console.log('Submitting order with data:', orderData);
-
       const result = await submitOrder(orderData);
 
       Toast.show({
@@ -114,7 +112,7 @@ const CartScreen = ({ navigation }) => {
         text1: `${documentType} Successful!`,
         text2: `Order ID: ${
           result.orderId
-        }\nTotal: Rs. ${calculateTotals().totalAmount.toLocaleString()}`,
+        }\nTotal: ${calculateTotals().totalAmount.toLocaleString()}`,
         position: 'bottom',
         visibilityTime: 4000,
       });
@@ -191,7 +189,6 @@ const CartScreen = ({ navigation }) => {
             const box = parseFloat(item.boxes) || 0;
             const pec = parseFloat(item.pieces) || 0;
             const unit_price = parseFloat(item.price) || 0;
-            const discount = parseFloat(item.discount) || 0;
             const pc_packing = parseFloat(item.basicInfo?.packing) || 1;
             const sqr_m = box * pc_packing + pec * pc_packing;
             const itemTotal = sqr_m * unit_price;
@@ -260,15 +257,13 @@ const CartScreen = ({ navigation }) => {
                     />
                     <DetailItem
                       label="Price"
-                      value={`Rs. ${parseFloat(
-                        item.price || 0,
-                      ).toLocaleString()}`}
+                      value={`${parseFloat(item.price || 0).toLocaleString()}`}
                     />
                   </View>
                   <View style={styles.detailRow}>
                     <DetailItem
                       label="Discount"
-                      value={`Rs. ${parseFloat(
+                      value={`${parseFloat(
                         item.discount || 0,
                       ).toLocaleString()}`}
                     />
@@ -278,7 +273,7 @@ const CartScreen = ({ navigation }) => {
                     />
                     <DetailItem
                       label="Total"
-                      value={`Rs. ${itemTotal.toLocaleString()}`}
+                      value={`${itemTotal.toLocaleString()}`}
                     />
                   </View>
                 </View>
@@ -312,7 +307,7 @@ const CartScreen = ({ navigation }) => {
           <View style={[styles.summaryRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total Amount:</Text>
             <Text style={styles.totalValue}>
-              Rs. {totals.totalAmount.toLocaleString()}
+              {totals.totalAmount.toLocaleString()}
             </Text>
           </View>
         </View>

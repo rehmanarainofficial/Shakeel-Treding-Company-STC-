@@ -228,7 +228,6 @@ const Dashboard = () => {
                   style={styles.card}
                   onPress={() => handleCardPress(card.screen)}
                   activeOpacity={0.8}
-                  disabled={card.id === 1} // Disable Pending Issue Order
                 >
                   <View style={styles.cardHeader}>
                     <View
@@ -240,14 +239,7 @@ const Dashboard = () => {
                       <Icon name={card.icon} size={24} color={card.color} />
                     </View>
                   </View>
-                  <Text
-                    style={[
-                      styles.cardTitle,
-                      card.id === 1 && { opacity: 0.5 },
-                    ]}
-                  >
-                    {card.title}
-                  </Text>
+                  <Text style={styles.cardTitle}>{card.title}</Text>
                 </TouchableOpacity>
               </Animated.View>
             ))}

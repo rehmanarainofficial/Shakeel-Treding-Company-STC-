@@ -16,7 +16,7 @@ import { API_URL } from '@env';
 import { useSelector } from 'react-redux';
 
 const PendingIssueOrderScreen = () => {
-  const { user_id, role_id } = useSelector(state => state.Data.currentData);
+  const { id, role_id } = useSelector(state => state.Data.currentData);
   const navigation = useNavigation();
   const [orderData, setOrderData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ const PendingIssueOrderScreen = () => {
     try {
       setError(null);
       const formData = new FormData();
-      formData.append('user_id', user_id);
+      formData.append('user_id', id);
       formData.append('role_id', role_id);
 
       const response = await fetch(`${API_URL}get_pending_issue_report.php`, {

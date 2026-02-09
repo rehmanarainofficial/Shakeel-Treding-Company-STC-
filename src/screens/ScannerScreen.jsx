@@ -12,6 +12,7 @@ import {
   Platform,
   Vibration,
   AppState,
+  FlatList,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {
@@ -38,6 +39,10 @@ const ScannerScreen = () => {
   const [alertConfig, setAlertConfig] = useState({});
   const [appState, setAppState] = useState(AppState.currentState);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [stockList, setStockList] = useState([]);
+  const [filteredStockList, setFilteredStockList] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState('');
 
   const device = useCameraDevice('back');
   const navigation = useNavigation();
@@ -162,6 +167,34 @@ const ScannerScreen = () => {
 
     return () => clearTimeout(timer);
   }, [hasInitialized, showCustomAlertModal]);
+
+  useEffect(() => {
+    const fetchStockData = async () => {
+      try {
+        const response = await fetch(`${API_URL}stock_master.php`);
+        const result = await response.json();
+        if (result.status === 'true' && Array.isArray(result.data)) {
+          setStockList(result.data);
+          setFilteredStockList(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch stock data:', error);
+      }
+    };
+
+    fetchStockData();
+  }, []);
+
+  useEffect(() => {
+    if (dropdownSearch.trim() === '') {
+      setFilteredStockList(stockList);
+    } else {
+      const filtered = stockList.filter(item =>
+        item.description.toLowerCase().includes(dropdownSearch.toLowerCase()),
+      );
+      setFilteredStockList(filtered);
+    }
+  }, [dropdownSearch, stockList]);
 
   const toggleFlash = useCallback(() => {
     setIsFlashOn(!isFlashOn);
@@ -307,6 +340,24 @@ const ScannerScreen = () => {
       );
     }
   }, [nameInput, fetchProductData, showCustomAlertModal]);
+
+  const handleStockSelect = item => {
+    setIsDropdownOpen(false);
+    setShowManualInput(false);
+    setManualInput('');
+    setDropdownSearch('');
+    fetchProductData(item.stock_id, 'manual');
+  };
+
+  const renderDropdownItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.dropdownItem}
+      onPress={() => handleStockSelect(item)}
+    >
+      <Text style={styles.dropdownItemText}>{item.description}</Text>
+      <Text style={styles.dropdownItemSubText}>ID: {item.stock_id}</Text>
+    </TouchableOpacity>
+  );
 
   const codeScanner = useCodeScanner({
     codeTypes: ['qr', 'code-128', 'ean-13'],
@@ -616,55 +667,82 @@ const ScannerScreen = () => {
 
             <View style={styles.divider} />
 
+            <View style={styles.divider} />
+
             <Text style={styles.modalSubtitle}>Search by Product Name</Text>
 
-            {/* Name Search Input */}
-            <View style={styles.searchContainer}>
+            {/* Dropdown Selector */}
+            <TouchableOpacity
+              style={styles.dropdownSelector}
+              onPress={() => setIsDropdownOpen(true)}
+            >
+              <Text style={styles.dropdownSelectorText}>Select Product</Text>
               <Ionicons
-                name="search"
+                name="chevron-down"
                 size={20}
                 color={colors.textSecondary}
-                style={styles.searchIcon}
               />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Enter product name..."
-                placeholderTextColor={colors.textSecondary}
-                value={nameInput}
-                onChangeText={setNameInput}
-                returnKeyType="search"
-                onSubmitEditing={handleNameSubmit}
-              />
-              {nameInput.length > 0 && (
-                <TouchableOpacity onPress={() => setNameInput('')}>
-                  <Ionicons
-                    name="close-circle"
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Search Button for Name */}
-            <TouchableOpacity
-              style={[
-                styles.searchButton,
-                (nameInput.trim().length < 3 || searchLoading) &&
-                  styles.searchButtonDisabled,
-              ]}
-              onPress={handleNameSubmit}
-              disabled={nameInput.trim().length < 3 || searchLoading}
-            >
-              {searchLoading ? (
-                <ActivityIndicator size="small" color={colors.text} />
-              ) : (
-                <>
-                  <Ionicons name="search" size={18} color={colors.text} />
-                  <Text style={styles.searchButtonText}>Search Name</Text>
-                </>
-              )}
             </TouchableOpacity>
+
+            {/* Dropdown Modal */}
+            <Modal
+              visible={isDropdownOpen}
+              animationType="slide"
+              transparent={true}
+              onRequestClose={() => setIsDropdownOpen(false)}
+            >
+              <View style={styles.dropdownModalContainer}>
+                <View style={styles.dropdownModalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Select Product</Text>
+                    <TouchableOpacity
+                      style={styles.closeButton}
+                      onPress={() => setIsDropdownOpen(false)}
+                    >
+                      <Ionicons
+                        name="close"
+                        size={24}
+                        color={colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.searchContainer}>
+                    <Ionicons
+                      name="search"
+                      size={20}
+                      color={colors.textSecondary}
+                      style={styles.searchIcon}
+                    />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search product..."
+                      placeholderTextColor={colors.textSecondary}
+                      value={dropdownSearch}
+                      onChangeText={setDropdownSearch}
+                    />
+                    {dropdownSearch.length > 0 && (
+                      <TouchableOpacity onPress={() => setDropdownSearch('')}>
+                        <Ionicons
+                          name="close-circle"
+                          size={18}
+                          color={colors.textSecondary}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <FlatList
+                    data={filteredStockList}
+                    renderItem={renderDropdownItem}
+                    keyExtractor={item => item.stock_id}
+                    style={styles.list}
+                    initialNumToRender={10}
+                    maxToRenderPerBatch={10}
+                  />
+                </View>
+              </View>
+            </Modal>
           </View>
         </View>
       </Modal>
@@ -990,6 +1068,50 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  dropdownSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  dropdownSelectorText: {
+    fontSize: 16,
+    color: colors.text,
+  },
+  dropdownModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    paddingTop: 50,
+  },
+  dropdownModalContent: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  dropdownItemSubText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  list: {
+    marginTop: 10,
   },
 });
 

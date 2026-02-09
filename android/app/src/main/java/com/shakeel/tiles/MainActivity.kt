@@ -11,7 +11,7 @@ class MainActivity : ReactActivity() {
   /**
    * Returns the name of the main component registered from JavaScript.
    */
-  override fun getMainComponentName(): String = "tiles"
+  override fun getMainComponentName(): String = "shakeel_tiles"
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(null)

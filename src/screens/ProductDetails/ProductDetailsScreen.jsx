@@ -517,14 +517,14 @@ const styles = StyleSheet.create({
     borderWidth: 0,
   },
   detailLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.textSecondary,
     marginBottom: 8,
     textAlign: 'center',
     fontWeight: '600',
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
@@ -555,10 +555,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   locationName: {
-    fontSize: 14,
+    fontSize: 22,
     fontWeight: '600',
     color: colors.text,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   stockContainer: {
     gap: 8,
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stockLabel: {
-    fontSize: 10,
+    fontSize: 15,
     fontWeight: '600',
     marginLeft: 4,
   },
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   stockText: {
-    fontSize: 10,
+    fontSize: 16,
     color: colors.textSecondary,
     fontWeight: '600',
   },

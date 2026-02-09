@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  StatusBar,
   Image,
   Dimensions,
 } from 'react-native';
@@ -38,8 +37,6 @@ export default function GetStartedScreen({ navigation }) {
       colors={[colors.background, '#2A231E', colors.primaryDark]}
       style={styles.container}
     >
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-
       <Animated.View
         style={[
           styles.content,
@@ -58,9 +55,7 @@ export default function GetStartedScreen({ navigation }) {
 
         <Text style={styles.title}>Shakeel Trading Company</Text>
 
-        <Text style={styles.subtitle}>
-          Elegant Tiles for Modern Homes
-        </Text>
+        <Text style={styles.subtitle}>Elegant Tiles for Modern Homes</Text>
       </Animated.View>
 
       <TouchableOpacity

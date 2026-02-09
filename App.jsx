@@ -7,22 +7,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
 import { Routes } from './src/routes/Routes';
 import { CartProvider } from './src/Context/CartContext';
+import { colors } from './src/utils/color';
 
 const App = () => {
   return (
     <Provider store={Store}>
       <CartProvider>
-      <SafeAreaView style={{ flex: 1 }}>
         <StatusBar
-          translucent
-          backgroundColor="transparent"
+          backgroundColor={colors.background}
           barStyle="light-content"
         />
-        <NavigationContainer>
-          <Routes />
-        </NavigationContainer>
-      </SafeAreaView>
-      <Toast />
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+          <NavigationContainer>
+            <Routes />
+          </NavigationContainer>
+        </SafeAreaView>
+        <Toast />
       </CartProvider>
     </Provider>
   );

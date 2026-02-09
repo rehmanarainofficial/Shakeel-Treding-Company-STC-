@@ -24,14 +24,15 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { API_URL } from '@env';
 
 const ScannerScreen = () => {
-  const [hasPermission, setHasPermission] = useState(null); 
+  const [hasPermission, setHasPermission] = useState(null);
   const [cameraStatus, setCameraStatus] = useState('Initializing scanner...');
   const [isScanning, setIsScanning] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [isCameraActive, setIsCameraActive] = useState(false); 
+  const [isCameraActive, setIsCameraActive] = useState(false);
   const [isFlashOn, setIsFlashOn] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualInput, setManualInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [showCustomAlert, setShowCustomAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({});
@@ -178,7 +179,11 @@ const ScannerScreen = () => {
         setIsScanning(false);
 
         const formData = new FormData();
-        formData.append('stock_id', stockId);
+        if (source === 'manual_name') {
+          formData.append('name', stockId); // Use stockId param as name for this source
+        } else {
+          formData.append('stock_id', stockId);
+        }
 
         const response = await fetch(`${API_URL}stc_locations.php`, {
           method: 'POST',
@@ -230,7 +235,9 @@ const ScannerScreen = () => {
         } else {
           showCustomAlertModal(
             'Product Not Found',
-            `No product found with Stock ID: "${stockId}"`,
+            `No product found with ${
+              source === 'manual_name' ? 'Name' : 'Stock ID'
+            }: "${stockId}"`,
             () => {
               setIsScanning(true);
               if (source === 'manual') {
@@ -290,6 +297,17 @@ const ScannerScreen = () => {
     }
   }, [manualInput, fetchProductData, showCustomAlertModal]);
 
+  const handleNameSubmit = useCallback(() => {
+    if (nameInput.trim().length >= 3) {
+      fetchProductData(nameInput.trim(), 'manual_name');
+    } else {
+      showCustomAlertModal(
+        'Invalid Input',
+        'Please enter at least 3 characters to search by name.',
+      );
+    }
+  }, [nameInput, fetchProductData, showCustomAlertModal]);
+
   const codeScanner = useCodeScanner({
     codeTypes: ['qr', 'code-128', 'ean-13'],
     onCodeScanned: useCallback(
@@ -328,6 +346,7 @@ const ScannerScreen = () => {
   const closeManualInput = useCallback(() => {
     setShowManualInput(false);
     setManualInput('');
+    setNameInput('');
     Keyboard.dismiss();
   }, []);
 
@@ -539,12 +558,14 @@ const ScannerScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalSubtitle}>Enter 7-digit Stock ID</Text>
+            <Text style={styles.modalSubtitle}>
+              Search by Stock ID (Format: 803-1333)
+            </Text>
 
-            {/* Search Input */}
+            {/* Stock ID Search Input */}
             <View style={styles.searchContainer}>
               <Ionicons
-                name="search"
+                name="barcode-outline"
                 size={20}
                 color={colors.textSecondary}
                 style={styles.searchIcon}
@@ -573,7 +594,7 @@ const ScannerScreen = () => {
               )}
             </View>
 
-            {/* Search Button */}
+            {/* Search Button for Stock ID */}
             <TouchableOpacity
               style={[
                 styles.searchButton,
@@ -588,7 +609,59 @@ const ScannerScreen = () => {
               ) : (
                 <>
                   <Ionicons name="search" size={18} color={colors.text} />
-                  <Text style={styles.searchButtonText}>Search Product</Text>
+                  <Text style={styles.searchButtonText}>Search ID</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <Text style={styles.modalSubtitle}>Search by Product Name</Text>
+
+            {/* Name Search Input */}
+            <View style={styles.searchContainer}>
+              <Ionicons
+                name="search"
+                size={20}
+                color={colors.textSecondary}
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Enter product name..."
+                placeholderTextColor={colors.textSecondary}
+                value={nameInput}
+                onChangeText={setNameInput}
+                returnKeyType="search"
+                onSubmitEditing={handleNameSubmit}
+              />
+              {nameInput.length > 0 && (
+                <TouchableOpacity onPress={() => setNameInput('')}>
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Search Button for Name */}
+            <TouchableOpacity
+              style={[
+                styles.searchButton,
+                (nameInput.trim().length < 3 || searchLoading) &&
+                  styles.searchButtonDisabled,
+              ]}
+              onPress={handleNameSubmit}
+              disabled={nameInput.trim().length < 3 || searchLoading}
+            >
+              {searchLoading ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : (
+                <>
+                  <Ionicons name="search" size={18} color={colors.text} />
+                  <Text style={styles.searchButtonText}>Search Name</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -820,6 +893,12 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
     fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginVertical: 20,
+    width: '100%',
   },
   // Custom Alert Modal
   alertModalContainer: {

@@ -1,4 +1,4 @@
-package com.tiles
+package com.shakeel.tiles
 
 import android.app.Application
 import com.facebook.react.PackageList

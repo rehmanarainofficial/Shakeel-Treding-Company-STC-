@@ -8,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   Animated,
-  StatusBar,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -98,8 +97,6 @@ const LoginScreen = ({ navigation }) => {
       colors={[colors.background, '#2A231E', colors.primaryDark]}
       style={styles.container}
     >
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
         keyboardShouldPersistTaps="handled"
@@ -182,10 +179,6 @@ const LoginScreen = ({ navigation }) => {
               </LinearGradient>
             )}
           </TouchableOpacity>
-
-          <Text style={styles.footerText}>
-            © 2025 Shakeel Trading Company. All Rights Reserved.
-          </Text>
         </Animated.View>
       </ScrollView>
     </LinearGradient>
@@ -261,7 +254,6 @@ const styles = StyleSheet.create({
   button: {
     borderRadius: 30,
     overflow: 'hidden',
-    marginTop: 10,
   },
   gradientBtn: {
     paddingVertical: 14,

@@ -6,7 +6,9 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
   Modal,
+  FlatList,
   Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,44 +20,129 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { API_URL } from '@env';
 
 const UploadPicScreen = ({ navigation }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [stockId, setStockId] = useState('');
+  const [selectedName, setSelectedName] = useState('');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Upload modal states (original)
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [imageSelecting, setImageSelecting] = useState(false);
   const [imageValidationError, setImageValidationError] = useState('');
 
-  // Fetch products from API with caching
-  const fetchProducts = useCallback(async () => {
+  // Dropdown states (same as ScannerScreen)
+  const [stockList, setStockList] = useState([]);
+  const [filteredStockList, setFilteredStockList] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState('');
+
+  // Fetch default data on load (GET request)
+  const fetchDefaultData = useCallback(async () => {
     try {
-      setLoading(true);
+      setInitialLoading(true);
 
       // Load cached data instantly
       const cachedData = await AsyncStorage.getItem('products_cache');
       if (cachedData) {
-        setProducts(JSON.parse(cachedData));
+        const parsed = JSON.parse(cachedData);
+        setProducts(parsed);
+        setStockList(parsed);
+        setFilteredStockList(parsed);
       }
 
       const response = await fetch(`${API_URL}stock_master.php`);
       const result = await response.json();
 
-      if (result.status === 'true' && result.data) {
+      if (result.status === 'true' && Array.isArray(result.data)) {
         setProducts(result.data);
+        setStockList(result.data);
+        setFilteredStockList(result.data);
         await AsyncStorage.setItem(
           'products_cache',
           JSON.stringify(result.data),
         );
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load data',
+      });
+    } finally {
+      setInitialLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDefaultData();
+  }, [fetchDefaultData]);
+
+  // Filter dropdown list based on search
+  useEffect(() => {
+    if (dropdownSearch.trim() === '') {
+      setFilteredStockList(stockList);
+    } else {
+      const filtered = stockList.filter(item =>
+        item.description?.toLowerCase().includes(dropdownSearch.toLowerCase()),
+      );
+      setFilteredStockList(filtered);
+    }
+  }, [dropdownSearch, stockList]);
+
+  // Search via POST
+  const handleSearch = useCallback(async () => {
+    if (!stockId.trim() && !selectedName.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please enter Stock ID or select Name to search',
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setHasSearched(true);
+
+      const formData = new FormData();
+      formData.append('stock_id', stockId.trim());
+      formData.append('name', selectedName.trim());
+
+      const response = await fetch(`${API_URL}stock_master.php`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.status === 'true') {
+        setProducts(result.data || []);
+        if (!result.data || result.data.length === 0) {
+          Toast.show({
+            type: 'info',
+            text1: 'No Results',
+            text2: 'No products found matching your search',
+          });
+        }
       } else {
+        setProducts([]);
         Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Failed to fetch products',
+          type: 'info',
+          text1: 'No Results',
+          text2: result.message || 'No products found',
         });
       }
     } catch (error) {
+      setProducts([]);
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -64,26 +151,23 @@ const UploadPicScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [stockId, selectedName]);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  const handleClear = () => {
+    setStockId('');
+    setSelectedName('');
+    setDropdownSearch('');
+    setHasSearched(false);
+    fetchDefaultData();
+  };
 
-  // Filter products based on search query
-  const filteredProducts = React.useMemo(() => {
-    if (!searchQuery.trim()) return products;
+  const handleStockSelect = item => {
+    setSelectedName(item.description || '');
+    setIsDropdownOpen(false);
+    setDropdownSearch('');
+  };
 
-    return products.filter(
-      product =>
-        product.description
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        product.stock_id?.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-  }, [products, searchQuery]);
-
-  // Handle card click to navigate to ProductDetailsScreen
+  // Handle card click to navigate to ProductDetailsScreen (original)
   const handleCardPress = async product => {
     try {
       const formData = new FormData();
@@ -230,7 +314,7 @@ const UploadPicScreen = ({ navigation }) => {
         setProducts(prevProducts =>
           prevProducts.map(product =>
             product.stock_id === selectedProduct.stock_id
-              ? { ...product, url: 'Yes' } // Update URL status to 'Yes'
+              ? { ...product, url: 'Yes' }
               : product,
           ),
         );
@@ -268,6 +352,16 @@ const UploadPicScreen = ({ navigation }) => {
     return Number(number).toString().replace(/\.0+$/, '');
   };
 
+  const renderDropdownItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.dropdownItem}
+      onPress={() => handleStockSelect(item)}
+    >
+      <Text style={styles.dropdownItemText}>{item.description}</Text>
+      <Text style={styles.dropdownItemSubText}>ID: {item.stock_id}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       <CustomHeader
@@ -275,26 +369,102 @@ const UploadPicScreen = ({ navigation }) => {
         onBackPress={() => navigation.goBack()}
       />
 
-      {/* Search Bar */}
+      {/* Search Inputs */}
       <View style={styles.searchSection}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color={colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by product name..."
-            placeholderTextColor={colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+        {/* Stock ID Input */}
+        <View style={styles.inputWrapper}>
+          <View style={styles.inputLabelRow}>
+            <Ionicons name="barcode-outline" size={18} color={colors.primary} />
+            <Text style={styles.inputLabel}>Stock ID</Text>
+          </View>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Enter Stock ID..."
+              placeholderTextColor={colors.textSecondary}
+              value={stockId}
+              onChangeText={setStockId}
+              returnKeyType="search"
+              onSubmitEditing={handleSearch}
+            />
+            {stockId.length > 0 && (
+              <TouchableOpacity onPress={() => setStockId('')}>
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Name Dropdown Selector */}
+        <View style={styles.inputWrapper}>
+          <View style={styles.inputLabelRow}>
+            <Ionicons name="text-outline" size={18} color={colors.primary} />
+            <Text style={styles.inputLabel}>Name</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.dropdownSelector}
+            onPress={() => setIsDropdownOpen(true)}
+          >
+            <Text
+              style={[
+                styles.dropdownSelectorText,
+                !selectedName && { color: colors.textSecondary },
+              ]}
+              numberOfLines={1}
+            >
+              {selectedName || 'Select Product Name...'}
+            </Text>
+            <Ionicons
+              name="chevron-down"
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+          {selectedName.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearNameButton}
+              onPress={() => setSelectedName('')}
+            >
               <Ionicons
                 name="close-circle"
-                size={20}
+                size={18}
                 color={colors.textSecondary}
               />
+              <Text style={styles.clearNameText}>Clear selection</Text>
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.searchButton, loading && styles.disabledButton]}
+            onPress={handleSearch}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.text} />
+            ) : (
+              <Ionicons name="search" size={20} color={colors.text} />
+            )}
+            <Text style={styles.searchButtonText}>
+              {loading ? 'Searching...' : 'Search'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={handleClear}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="refresh-outline" size={20} color={colors.text} />
+            <Text style={styles.clearButtonText}>Clear</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -304,18 +474,22 @@ const UploadPicScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {loading ? (
+        {initialLoading || loading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading products...</Text>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>
+              {initialLoading ? 'Loading products...' : 'Searching...'}
+            </Text>
           </View>
-        ) : (
+        ) : products.length > 0 ? (
           <>
             <Text style={styles.resultsText}>
-              {filteredProducts.length} products found
+              {products.length} products found
+              {hasSearched ? ' (Search Results)' : ''}
             </Text>
 
             <View style={styles.productsGrid}>
-              {filteredProducts.map((product, index) => (
+              {products.map((product, index) => (
                 <ProductCard
                   key={product.stock_id || index}
                   product={product}
@@ -326,10 +500,22 @@ const UploadPicScreen = ({ navigation }) => {
               ))}
             </View>
           </>
+        ) : (
+          <View style={styles.loadingContainer}>
+            <Ionicons
+              name="search-outline"
+              size={60}
+              color={colors.textSecondary}
+            />
+            <Text style={styles.noResultsText}>No products found</Text>
+            <Text style={styles.noResultsSubText}>
+              Try searching with different Stock ID or Name
+            </Text>
+          </View>
         )}
       </ScrollView>
 
-      {/* Upload Modal */}
+      {/* Upload Modal (original) */}
       <Modal
         visible={uploadModalVisible}
         animationType="slide"
@@ -354,7 +540,9 @@ const UploadPicScreen = ({ navigation }) => {
                 <Text style={styles.productName}>
                   {selectedProduct.description}
                 </Text>
-                <Text style={styles.stockId}>{selectedProduct.stock_id}</Text>
+                <Text style={styles.stockIdText}>
+                  {selectedProduct.stock_id}
+                </Text>
               </View>
             )}
 
@@ -416,7 +604,7 @@ const UploadPicScreen = ({ navigation }) => {
                   styles.button,
                   styles.uploadButton,
                   (!selectedImage || uploading || imageSelecting) &&
-                    styles.disabledButton,
+                    styles.disabledUploadButton,
                 ]}
                 onPress={handleUpload}
                 disabled={!selectedImage || uploading || imageSelecting}
@@ -435,12 +623,69 @@ const UploadPicScreen = ({ navigation }) => {
         </View>
       </Modal>
 
+      {/* Dropdown Modal (same as ScannerScreen) */}
+      <Modal
+        visible={isDropdownOpen}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsDropdownOpen(false)}
+      >
+        <View style={styles.dropdownModalContainer}>
+          <View style={styles.dropdownModalContent}>
+            <View style={styles.dropdownModalHeader}>
+              <Text style={styles.dropdownModalTitle}>Select Product</Text>
+              <TouchableOpacity
+                style={styles.dropdownCloseButton}
+                onPress={() => setIsDropdownOpen(false)}
+              >
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dropdownSearchContainer}>
+              <Ionicons
+                name="search"
+                size={20}
+                color={colors.textSecondary}
+                style={styles.dropdownSearchIcon}
+              />
+              <TextInput
+                style={styles.dropdownSearchInput}
+                placeholder="Search product..."
+                placeholderTextColor={colors.textSecondary}
+                value={dropdownSearch}
+                onChangeText={setDropdownSearch}
+                autoFocus={true}
+              />
+              {dropdownSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setDropdownSearch('')}>
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <FlatList
+              data={filteredStockList}
+              renderItem={renderDropdownItem}
+              keyExtractor={item => item.stock_id}
+              style={styles.dropdownList}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+            />
+          </View>
+        </View>
+      </Modal>
+
       <Toast />
     </View>
   );
 };
 
-// Updated Product Card Component with URL status and clickable
+// Original Product Card Component with URL status and clickable
 const ProductCard = ({ product, onCardPress, onUploadPress, formatNumber }) => (
   <TouchableOpacity
     style={styles.productCard}
@@ -453,12 +698,12 @@ const ProductCard = ({ product, onCardPress, onUploadPress, formatNumber }) => (
         <Text style={styles.productName} numberOfLines={2}>
           {product.description || 'No Description'}
         </Text>
-        <Text style={styles.stockId}>{product.stock_id}</Text>
+        <Text style={styles.stockIdText}>{product.stock_id}</Text>
       </View>
       <TouchableOpacity
         style={styles.uploadIcon}
         onPress={e => {
-          e.stopPropagation(); // Prevent card press when clicking upload icon
+          e.stopPropagation();
           onUploadPress(product);
         }}
       >
@@ -527,28 +772,119 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+
   // Search Section
   searchSection: {
     padding: 16,
     backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
+    gap: 12,
   },
-  searchContainer: {
+  inputWrapper: {
+    gap: 6,
+  },
+  inputLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    gap: 6,
+    marginLeft: 4,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
-  searchInput: {
+  textInput: {
     flex: 1,
     color: colors.text,
-    fontSize: 16,
-    marginLeft: 12,
+    fontSize: 15,
+    marginRight: 8,
+    padding: 0,
+  },
+
+  // Dropdown Selector
+  dropdownSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  dropdownSelectorText: {
+    fontSize: 15,
+    color: colors.text,
+    flex: 1,
     marginRight: 8,
   },
+  clearNameButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 4,
+    marginTop: 4,
+  },
+  clearNameText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+
+  // Buttons
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  searchButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  searchButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  clearButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+
   // Loading Container
   loadingContainer: {
     flex: 1,
@@ -559,7 +895,21 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: colors.textSecondary,
+    marginTop: 12,
   },
+  noResultsText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 16,
+  },
+  noResultsSubText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+
   // Scroll View
   scrollView: {
     flex: 1,
@@ -573,11 +923,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginLeft: 4,
   },
+
   // Products Grid
   productsGrid: {
     gap: 16,
   },
-  // Product Card
+
+  // Product Card (original)
   productCard: {
     backgroundColor: colors.card,
     borderRadius: 16,
@@ -605,7 +957,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 20,
   },
-  stockId: {
+  stockIdText: {
     fontSize: 13,
     color: colors.primary,
     fontWeight: '600',
@@ -618,13 +970,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Separator
   separator: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
     marginBottom: 12,
   },
-  // Details Grid
   detailsGrid: {
     marginBottom: 12,
   },
@@ -652,7 +1002,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
   },
-  // Upload Status
+
+  // Upload Status (original)
   uploadStatus: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -685,7 +1036,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '600',
   },
-  // Modal Styles
+
+  // Upload Modal Styles (original)
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -727,7 +1079,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
   },
-  // Image Section
   imageSection: {
     padding: 20,
   },
@@ -753,7 +1104,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 8,
   },
-  // New styles for image loading and validation
   loadingImageContainer: {
     width: '100%',
     height: 200,
@@ -790,7 +1140,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
   },
-  // Action Buttons
   actionButtons: {
     padding: 20,
     gap: 12,
@@ -810,7 +1159,7 @@ const styles = StyleSheet.create({
   uploadButton: {
     backgroundColor: colors.success,
   },
-  disabledButton: {
+  disabledUploadButton: {
     backgroundColor: colors.textSecondary,
     opacity: 0.6,
   },
@@ -818,6 +1167,71 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
+  },
+
+  // Dropdown Modal Styles (same as ScannerScreen)
+  dropdownModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    paddingTop: 50,
+  },
+  dropdownModalContent: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+  },
+  dropdownModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dropdownModalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  dropdownCloseButton: {
+    padding: 4,
+  },
+  dropdownSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  dropdownSearchIcon: {
+    marginRight: 12,
+  },
+  dropdownSearchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.text,
+    padding: 0,
+  },
+  dropdownList: {
+    marginTop: 10,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  dropdownItemSubText: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
 });
 

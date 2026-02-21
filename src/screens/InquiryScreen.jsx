@@ -118,7 +118,6 @@ const InquiryScreen = ({ navigation }) => {
       });
 
       const result = await response.json();
-      console.log(result);
 
       if (result.status === 'true' && result.data) {
         loadCartFromOrder(result.data, result.header_data?.[0]);

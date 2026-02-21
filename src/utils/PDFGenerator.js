@@ -181,9 +181,11 @@ export const generatePDF = async (header, items) => {
     y -= 40;
 
     // --- Items Table ---
+    // Columns: Sr, Product, Packing, Box, Pc, Qty, Uom, Disc%, Disc Value, Amount
+    // (Rate/Pricing column removed, Disc Value column added)
     const tableTop = y;
-    const colX = [50, 75, 240, 280, 310, 340, 380, 410, 450, 490];
-    const colWidths = [25, 165, 40, 30, 30, 40, 30, 40, 40, 55];
+    const colX = [50, 75, 280, 310, 340, 375, 410, 450, 490];
+    const colWidths = [25, 205, 30, 30, 35, 35, 40, 40, 55];
 
     page.drawRectangle({
       x: 50,
@@ -196,19 +198,18 @@ export const generatePDF = async (header, items) => {
     const headers = [
       'Sr.',
       'Product',
-      'Packing',
       'Box',
       'Pc',
       'Qty',
       'Uom',
-      'Rate',
-      'Disc',
+      'Disc%',
+      'Disc Val',
       'Amount',
     ];
     headers.forEach((h, i) => {
       let xPos = colX[i];
       if (i > 1) xPos += 2;
-      if (i === 9) xPos += 10;
+      if (i === 8) xPos += 10;
       drawText(h, xPos, y - 11, 8, boldFont);
     });
 
@@ -234,21 +235,26 @@ export const generatePDF = async (header, items) => {
       if (desc.length > 35) desc = desc.substring(0, 32) + '...';
       drawText(desc, colX[1], y, 8);
 
-      drawText(item.packing || '-', colX[2] + 5, y, 8);
-      drawText(item.box || '-', colX[3] + 5, y, 8);
-      drawText(item.pec || item.pc || '-', colX[4] + 5, y, 8);
-      drawText(item.quantity || item.qty || '-', colX[5] + 5, y, 8);
-      drawText(item.uom || 'sqm', colX[6] + 5, y, 8);
+      drawText(item.box || '-', colX[2] + 5, y, 8);
+      drawText(item.pec || item.pc || '-', colX[3] + 5, y, 8);
+      drawText(item.quantity || item.qty || '-', colX[4] + 5, y, 8);
+      drawText(item.uom || 'sqm', colX[5] + 5, y, 8);
 
-      const rate = item.unit_price || item.rate || '0';
-      drawText(rate.toString(), colX[7], y, 8);
+      // Disc% (percentage) - formatted to 2 decimal places
+      const discPercent = parseFloat(item.discount_percent || item.disc || 0);
+      drawText(discPercent.toFixed(2), colX[6] + 5, y, 8);
 
-      const disc = item.discount_percent || item.disc || '0.00';
-      drawText(disc.toString(), colX[8] + 5, y, 8);
-
-      // Calculate Amount: Quantity * Unit Price
+      // Calculate Disc Value (actual discount amount)
       const qty = parseFloat(item.quantity || item.qty || 0);
       const unitPrice = parseFloat(item.unit_price || item.rate || 0);
+      const discValue = (qty * unitPrice * discPercent) / 100;
+      const discValueStr = discValue.toLocaleString('en-PK', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      drawText(discValueStr, colX[7] + 2, y, 8);
+
+      // Calculate Amount: Quantity * Unit Price
       const rowAmount = qty * unitPrice;
       const amountStr = rowAmount.toLocaleString('en-PK', {
         minimumFractionDigits: 2,
@@ -256,7 +262,7 @@ export const generatePDF = async (header, items) => {
       });
 
       const amountWidth = font.widthOfTextAtSize(amountStr, 8);
-      drawText(amountStr, colX[9] + colWidths[9] - amountWidth - 5, y, 8);
+      drawText(amountStr, colX[8] + colWidths[8] - amountWidth - 5, y, 8);
 
       if (item.long_description) {
         y -= 10;
@@ -297,7 +303,6 @@ export const generatePDF = async (header, items) => {
     drawLineVert(colX[6] - 2);
     drawLineVert(colX[7] - 2);
     drawLineVert(colX[8] - 2);
-    drawLineVert(colX[9] - 2);
 
     // --- Totals Section ---
     y -= 20;
@@ -317,7 +322,7 @@ export const generatePDF = async (header, items) => {
     let valWidth = font.widthOfTextAtSize(formatNum(totalAmount), 8);
     drawText(
       formatNum(totalAmount),
-      valueX + colWidths[9] - valWidth - 5,
+      valueX + colWidths[8] - valWidth - 5,
       y,
       8,
     );
@@ -325,14 +330,14 @@ export const generatePDF = async (header, items) => {
 
     drawText('Discount', labelX, y, 8, boldFont);
     valWidth = font.widthOfTextAtSize(formatNum(discount), 8);
-    drawText(formatNum(discount), valueX + colWidths[9] - valWidth - 5, y, 8);
+    drawText(formatNum(discount), valueX + colWidths[8] - valWidth - 5, y, 8);
     y -= 12;
 
     drawText('QUOTATION TOTAL', labelX - 20, y, 9, boldFont);
     valWidth = boldFont.widthOfTextAtSize(formatNum(finalTotal), 9);
     drawText(
       formatNum(finalTotal),
-      valueX + colWidths[9] - valWidth - 5,
+      valueX + colWidths[8] - valWidth - 5,
       y,
       9,
       boldFont,
@@ -341,7 +346,27 @@ export const generatePDF = async (header, items) => {
     y -= 20;
 
     drawText(`Amount in words: ${numberToWords(finalTotal)}`, 50, y, 8);
-    y -= 40;
+    y -= 30;
+
+    // --- Terms and Conditions ---
+    drawText('Terms and Conditions:', 50, y, 10, boldFont);
+    y -= 15;
+
+    const terms = [
+      '1. This quotation is valid for 7 days from the date of issuance.',
+      '2. The quoted rates are without offloading and transportation of goods.',
+      "3. This quotation doesn't confirm the availability of stocks.",
+      '4. The availability of stock will be confirmed and reserved on advance payment.',
+      '   i.e minimum 50% of the order value.',
+      '5. Customised orders will be confirmed on 100% advance payments.',
+    ];
+
+    terms.forEach(term => {
+      drawText(term, 55, y, 8);
+      y -= 12;
+    });
+
+    y -= 15;
 
     // --- Signatures ---
     const sigY = y;

@@ -118,6 +118,7 @@ const InquiryScreen = ({ navigation }) => {
       });
 
       const result = await response.json();
+      console.log(result);
 
       if (result.status === 'true' && result.data) {
         loadCartFromOrder(result.data, result.header_data?.[0]);
@@ -161,25 +162,21 @@ const InquiryScreen = ({ navigation }) => {
       });
 
       const result = await response.json();
-      
-      
+
       let headerData = null;
       let detailsData = [];
-      
+
       if (result.status_header === 'true' && result.data_header?.length > 0) {
         headerData = result.data_header[0];
       }
-      
+
       if (result.status_detail === 'true' && result.data_detail?.length > 0) {
         detailsData = result.data_detail;
       }
-      
+
       if (!headerData) {
         throw new Error('Could not fetch order details');
       }
-      
-      console.log(headerData);
-      console.log(detailsData);
       const filePath = await generatePDF(headerData, detailsData);
 
       const shareUrl = `file://${filePath}`;

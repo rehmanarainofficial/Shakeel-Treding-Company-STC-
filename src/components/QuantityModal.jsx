@@ -212,18 +212,19 @@ const QuantityModal = ({
               <View style={styles.inputContainer}>
                 <Text style={styles.currencyPrefix}>Rs.</Text>
                 <TextInput
-                  style={[styles.input, { flex: 1 }]}
+                  style={[styles.input, { flex: 1 }, styles.disabledInput]}
                   value={priceValue}
-                  onChangeText={setPriceValue}
+                  onChangeText={null}
                   keyboardType="numeric"
-                  placeholder="Enter price"
+                  placeholder="Price"
                   placeholderTextColor={colors.textSecondary}
+                  editable={false}
                 />
               </View>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Discount (text1)</Text>
+              <Text style={styles.label}>Discount</Text>
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[styles.input, { flex: 1 }]}

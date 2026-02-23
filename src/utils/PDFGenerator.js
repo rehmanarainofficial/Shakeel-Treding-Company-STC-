@@ -109,28 +109,23 @@ export const generatePDF = async (header, items) => {
       rgb(0.6, 0.6, 0.6),
     );
 
-    drawText('WAREHOUSE I-9:', 50, y, 10, boldFont);
+    drawText(header.location_name, 50, y, 10, boldFont);
     y -= 12;
-    drawText('PLOT NO 231-232, ST NO. 7, I-9/2, ISLAMABAD.', 50, y, 8);
-    y -= 10;
-    drawText('(7) 051-6133238, (8) 051-6130686, (9) 051-2751461', 50, y, 8);
+    drawText(header.location_address || '', 50, y, 8);
     y -= 20;
-
-    drawText('T.CHOWK: 1 KM-TCHOWK, NEAR NOOR MAHAL MARQUEE, GT', 50, y, 8);
-    y -= 10;
-    drawText('ROAD, RAWALPINDI. 051-3757525', 50, y, 8);
 
     const dateStr = header.trans_date || new Date().toLocaleDateString('en-GB');
     const quoteNo = header.trans_no || header.reference || '';
 
     const rightColLabel = width - 200;
     const rightColValue = width - 100;
-    const headerY = y + 30;
 
-    drawText('Date', rightColLabel, headerY, 9);
-    drawText(dateStr, rightColValue, headerY, 9);
-    drawText('Quotation No', rightColLabel, headerY - 12, 9);
-    drawText(quoteNo, rightColValue, headerY - 12, 9);
+    drawText('Date', rightColLabel, y, 9);
+    drawText(dateStr, rightColValue, y, 9);
+    y -= 12;
+    drawText('Quotation No', rightColLabel, y, 9);
+    drawText(quoteNo, rightColValue, y, 9);
+    y -= 5;
 
     y -= 20;
     drawLine(50, y, width - 50, y, 1.5);

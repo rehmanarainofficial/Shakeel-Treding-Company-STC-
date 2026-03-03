@@ -40,7 +40,7 @@ const ProductDetailsScreen = ({ route, navigation }) => {
       headerStyle: {
         backgroundColor: colors.background,
       },
-      headerTintColor: colors.primary, // Back button color
+      headerTintColor: colors.primary,
       headerTitleStyle: {
         color: colors.text,
         fontWeight: '600',
@@ -109,7 +109,6 @@ const ProductDetailsScreen = ({ route, navigation }) => {
   }, []);
 
   const handleAddToCart = quantityInfo => {
-    // If editing, remove the old item first
     if (editMode && oldItemId) {
       removeFromCart(oldItemId);
     }
@@ -123,7 +122,6 @@ const ProductDetailsScreen = ({ route, navigation }) => {
       quantityInfo,
     );
 
-    // If editing, navigate back to cart
     if (editMode) {
       navigation.navigate('CartScreen');
     }

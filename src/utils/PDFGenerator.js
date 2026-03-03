@@ -62,7 +62,7 @@ const numberToWords = num => {
   str +=
     n[5] != 0
       ? (str != '' ? 'and ' : '') +
-        (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]])
+      (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]])
       : '';
   return str + 'Only';
 };
@@ -77,7 +77,6 @@ export const generatePDF = async (header, items) => {
 
     let y = height - 50;
     const fontSize = 10;
-    const smallSize = 8;
 
     const drawText = (
       text,
@@ -115,7 +114,7 @@ export const generatePDF = async (header, items) => {
     y -= 20;
 
     const dateStr = header.trans_date || new Date().toLocaleDateString('en-GB');
-    const quoteNo = header.trans_no || header.reference || '';
+    const quoteNo = header.reference || '';
 
     const rightColLabel = width - 200;
     const rightColValue = width - 100;
@@ -123,7 +122,7 @@ export const generatePDF = async (header, items) => {
     drawText('Date', rightColLabel, y, 9);
     drawText(dateStr, rightColValue, y, 9);
     y -= 12;
-    drawText('Quotation No', rightColLabel, y, 9);
+    drawText('Reference No', rightColLabel, y, 9);
     drawText(quoteNo, rightColValue, y, 9);
     y -= 5;
 
@@ -136,7 +135,7 @@ export const generatePDF = async (header, items) => {
     y -= 15;
     drawText(header.name || 'N/A', 50, y, 10, boldFont);
     y -= 12;
-    drawText(header.phone || '', 50, y, 10);
+    drawText(header.phone || header.customer_contact_no || '', 50, y, 10);
     y -= 25;
 
     // --- Sales Person Box ---
@@ -176,8 +175,6 @@ export const generatePDF = async (header, items) => {
     y -= 40;
 
     // --- Items Table ---
-    // Columns: Sr, Product, Packing, Box, Pc, Qty, Uom, Disc%, Disc Value, Amount
-    // (Rate/Pricing column removed, Disc Value column added)
     const tableTop = y;
     const colX = [50, 75, 280, 310, 340, 375, 410, 450, 490];
     const colWidths = [25, 205, 30, 30, 35, 35, 40, 40, 55];
@@ -236,22 +233,21 @@ export const generatePDF = async (header, items) => {
       drawText(item.uom || 'sqm', colX[5] + 5, y, 8);
 
       // Disc% (percentage) - formatted to 2 decimal places
-      const discPercent = parseFloat(item.discount_percent || item.disc || 0);
+      const discPercent = parseFloat(item.discount_percent * 100 || 0);
       drawText(discPercent.toFixed(2), colX[6] + 5, y, 8);
 
       // Calculate Disc Value (actual discount amount)
-      const qty = parseFloat(item.quantity || item.qty || 0);
-      const unitPrice = parseFloat(item.unit_price || item.rate || 0);
-      const discValue = (qty * unitPrice * discPercent) / 100;
-      const discValueStr = discValue.toLocaleString('en-PK', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      drawText(discValueStr, colX[7] + 2, y, 8);
+      // const qty = parseFloat(item.quantity || item.qty || 0);
+      // const unitPrice = parseFloat(item.unit_price || item.rate || 0);
+      // const discValue = (qty * unitPrice * discPercent) / 100;
+      // const discValueStr = discValue.toLocaleString('en-PK', {
+      //   minimumFractionDigits: 2,
+      //   maximumFractionDigits: 2,
+      // });
+      drawText(Math.floor(item.discount_value) || '-', colX[7] + 2, y, 8);
 
-      // Calculate Amount: Quantity * Unit Price
-      const rowAmount = qty * unitPrice;
-      const amountStr = rowAmount.toLocaleString('en-PK', {
+      const netValue = parseFloat(item.net_value || 0);
+      const amountStr = netValue.toLocaleString('en-PK', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
@@ -272,7 +268,7 @@ export const generatePDF = async (header, items) => {
       }
 
       y -= 12;
-      totalAmount += rowAmount;
+      totalAmount += netValue;
     }
 
     y -= 5;
@@ -313,18 +309,8 @@ export const generatePDF = async (header, items) => {
     const labelX = 400;
     const valueX = 490;
 
-    drawText('Sub-total', labelX, y, 8, boldFont);
-    let valWidth = font.widthOfTextAtSize(formatNum(totalAmount), 8);
-    drawText(
-      formatNum(totalAmount),
-      valueX + colWidths[8] - valWidth - 5,
-      y,
-      8,
-    );
-    y -= 12;
-
     drawText('Discount', labelX, y, 8, boldFont);
-    valWidth = font.widthOfTextAtSize(formatNum(discount), 8);
+    let valWidth = font.widthOfTextAtSize(formatNum(discount), 8);
     drawText(formatNum(discount), valueX + colWidths[8] - valWidth - 5, y, 8);
     y -= 12;
 

@@ -35,11 +35,7 @@ const UploadPicScreen = ({ navigation }) => {
   const [imageSelecting, setImageSelecting] = useState(false);
   const [imageValidationError, setImageValidationError] = useState('');
 
-  // Dropdown states (same as ScannerScreen)
-  const [stockList, setStockList] = useState([]);
-  const [filteredStockList, setFilteredStockList] = useState([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [dropdownSearch, setDropdownSearch] = useState('');
+
 
   // Fetch default data on load (GET request)
   const fetchDefaultData = useCallback(async () => {
@@ -51,17 +47,13 @@ const UploadPicScreen = ({ navigation }) => {
       if (cachedData) {
         const parsed = JSON.parse(cachedData);
         setProducts(parsed);
-        setStockList(parsed);
-        setFilteredStockList(parsed);
       }
 
-      const response = await fetch(`${API_URL}stock_master.php`);
+      const response = await fetch(`${API_URL}stock_master_upload_pic.php`);
       const result = await response.json();
 
       if (result.status === 'true' && Array.isArray(result.data)) {
         setProducts(result.data);
-        setStockList(result.data);
-        setFilteredStockList(result.data);
         await AsyncStorage.setItem(
           'products_cache',
           JSON.stringify(result.data),
@@ -82,17 +74,7 @@ const UploadPicScreen = ({ navigation }) => {
     fetchDefaultData();
   }, [fetchDefaultData]);
 
-  // Filter dropdown list based on search
-  useEffect(() => {
-    if (dropdownSearch.trim() === '') {
-      setFilteredStockList(stockList);
-    } else {
-      const filtered = stockList.filter(item =>
-        item.description?.toLowerCase().includes(dropdownSearch.toLowerCase()),
-      );
-      setFilteredStockList(filtered);
-    }
-  }, [dropdownSearch, stockList]);
+
 
   // Search via POST
   const handleSearch = useCallback(async () => {
@@ -100,7 +82,7 @@ const UploadPicScreen = ({ navigation }) => {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Please enter Stock ID or select Name to search',
+        text2: 'Please enter Stock ID or Name to search',
       });
       return;
     }
@@ -113,7 +95,7 @@ const UploadPicScreen = ({ navigation }) => {
       formData.append('stock_id', stockId.trim());
       formData.append('name', selectedName.trim());
 
-      const response = await fetch(`${API_URL}stock_master.php`, {
+      const response = await fetch(`${API_URL}stock_master_upload_pic.php`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -156,16 +138,11 @@ const UploadPicScreen = ({ navigation }) => {
   const handleClear = () => {
     setStockId('');
     setSelectedName('');
-    setDropdownSearch('');
     setHasSearched(false);
     fetchDefaultData();
   };
 
-  const handleStockSelect = item => {
-    setSelectedName(item.description || '');
-    setIsDropdownOpen(false);
-    setDropdownSearch('');
-  };
+
 
   // Handle card click to navigate to ProductDetailsScreen (original)
   const handleCardPress = async product => {
@@ -352,15 +329,7 @@ const UploadPicScreen = ({ navigation }) => {
     return Number(number).toString().replace(/\.0+$/, '');
   };
 
-  const renderDropdownItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.dropdownItem}
-      onPress={() => handleStockSelect(item)}
-    >
-      <Text style={styles.dropdownItemText}>{item.description}</Text>
-      <Text style={styles.dropdownItemSubText}>ID: {item.stock_id}</Text>
-    </TouchableOpacity>
-  );
+
 
   return (
     <View style={styles.container}>
@@ -399,44 +368,32 @@ const UploadPicScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Name Dropdown Selector */}
+        {/* Name Input Field */}
         <View style={styles.inputWrapper}>
           <View style={styles.inputLabelRow}>
             <Ionicons name="text-outline" size={18} color={colors.primary} />
             <Text style={styles.inputLabel}>Name</Text>
           </View>
-          <TouchableOpacity
-            style={styles.dropdownSelector}
-            onPress={() => setIsDropdownOpen(true)}
-          >
-            <Text
-              style={[
-                styles.dropdownSelectorText,
-                !selectedName && { color: colors.textSecondary },
-              ]}
-              numberOfLines={1}
-            >
-              {selectedName || 'Select Product Name...'}
-            </Text>
-            <Ionicons
-              name="chevron-down"
-              size={20}
-              color={colors.textSecondary}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Enter Product Name..."
+              placeholderTextColor={colors.textSecondary}
+              value={selectedName}
+              onChangeText={setSelectedName}
+              returnKeyType="search"
+              onSubmitEditing={handleSearch}
             />
-          </TouchableOpacity>
-          {selectedName.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearNameButton}
-              onPress={() => setSelectedName('')}
-            >
-              <Ionicons
-                name="close-circle"
-                size={18}
-                color={colors.textSecondary}
-              />
-              <Text style={styles.clearNameText}>Clear selection</Text>
-            </TouchableOpacity>
-          )}
+            {selectedName.length > 0 && (
+              <TouchableOpacity onPress={() => setSelectedName('')}>
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Action Buttons */}
@@ -623,62 +580,7 @@ const UploadPicScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Dropdown Modal (same as ScannerScreen) */}
-      <Modal
-        visible={isDropdownOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsDropdownOpen(false)}
-      >
-        <View style={styles.dropdownModalContainer}>
-          <View style={styles.dropdownModalContent}>
-            <View style={styles.dropdownModalHeader}>
-              <Text style={styles.dropdownModalTitle}>Select Product</Text>
-              <TouchableOpacity
-                style={styles.dropdownCloseButton}
-                onPress={() => setIsDropdownOpen(false)}
-              >
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
 
-            <View style={styles.dropdownSearchContainer}>
-              <Ionicons
-                name="search"
-                size={20}
-                color={colors.textSecondary}
-                style={styles.dropdownSearchIcon}
-              />
-              <TextInput
-                style={styles.dropdownSearchInput}
-                placeholder="Search product..."
-                placeholderTextColor={colors.textSecondary}
-                value={dropdownSearch}
-                onChangeText={setDropdownSearch}
-                autoFocus={true}
-              />
-              {dropdownSearch.length > 0 && (
-                <TouchableOpacity onPress={() => setDropdownSearch('')}>
-                  <Ionicons
-                    name="close-circle"
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <FlatList
-              data={filteredStockList}
-              renderItem={renderDropdownItem}
-              keyExtractor={item => item.stock_id}
-              style={styles.dropdownList}
-              initialNumToRender={10}
-              maxToRenderPerBatch={10}
-            />
-          </View>
-        </View>
-      </Modal>
 
       <Toast />
     </View>
@@ -813,35 +715,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
 
-  // Dropdown Selector
-  dropdownSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  dropdownSelectorText: {
-    fontSize: 15,
-    color: colors.text,
-    flex: 1,
-    marginRight: 8,
-  },
-  clearNameButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginLeft: 4,
-    marginTop: 4,
-  },
-  clearNameText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
+
 
   // Buttons
   buttonRow: {
@@ -1169,70 +1043,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 
-  // Dropdown Modal Styles (same as ScannerScreen)
-  dropdownModalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    paddingTop: 50,
-  },
-  dropdownModalContent: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-  },
-  dropdownModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  dropdownModalTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  dropdownCloseButton: {
-    padding: 4,
-  },
-  dropdownSearchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  dropdownSearchIcon: {
-    marginRight: 12,
-  },
-  dropdownSearchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.text,
-    padding: 0,
-  },
-  dropdownList: {
-    marginTop: 10,
-  },
-  dropdownItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  dropdownItemSubText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
+
 });
 
 export default UploadPicScreen;

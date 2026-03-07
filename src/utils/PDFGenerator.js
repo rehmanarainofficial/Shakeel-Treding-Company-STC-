@@ -176,8 +176,9 @@ export const generatePDF = async (header, items) => {
 
     // --- Items Table ---
     const tableTop = y;
-    const colX = [50, 75, 280, 310, 340, 375, 410, 450, 490];
-    const colWidths = [25, 205, 30, 30, 35, 35, 40, 40, 55];
+    // Column positions: Sr, Product, Box, Pc, Qty, Uom, Rate, Disc%, Amount
+    const colX = [50, 75, 265, 295, 325, 360, 400, 440, 480];
+    const colWidths = [25, 190, 30, 30, 35, 40, 40, 40, 55];
 
     page.drawRectangle({
       x: 50,
@@ -194,14 +195,21 @@ export const generatePDF = async (header, items) => {
       'Pc',
       'Qty',
       'Uom',
+      'Rate',
       'Disc%',
-      'Disc Val',
       'Amount',
     ];
     headers.forEach((h, i) => {
       let xPos = colX[i];
-      if (i > 1) xPos += 2;
-      if (i === 8) xPos += 10;
+      // Center align headers for numeric columns
+      if (i >= 2 && i <= 7) {
+        const textWidth = boldFont.widthOfTextAtSize(h, 8);
+        xPos = colX[i] + (colWidths[i] - textWidth) / 2;
+      }
+      if (i === 8) {
+        const textWidth = boldFont.widthOfTextAtSize(h, 8);
+        xPos = colX[i] + colWidths[i] - textWidth - 5;
+      }
       drawText(h, xPos, y - 11, 8, boldFont);
     });
 
@@ -217,46 +225,71 @@ export const generatePDF = async (header, items) => {
     y -= 25;
 
     let totalAmount = 0;
+    const rowHeight = 16;
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
-      drawText((i + 1).toString(), colX[0] + 2, y, 8);
+      // Sr. - center aligned
+      const srText = (i + 1).toString();
+      const srWidth = font.widthOfTextAtSize(srText, 8);
+      drawText(srText, colX[0] + (colWidths[0] - srWidth) / 2, y, 8);
 
+      // Product - left aligned
       let desc = item.description || '';
-      if (desc.length > 35) desc = desc.substring(0, 32) + '...';
+      if (desc.length > 30) desc = desc.substring(0, 27) + '...';
       drawText(desc, colX[1], y, 8);
 
-      drawText(item.box || '-', colX[2] + 5, y, 8);
-      drawText(item.pec || item.pc || '-', colX[3] + 5, y, 8);
-      drawText(item.quantity || item.qty || '-', colX[4] + 5, y, 8);
-      drawText(item.uom || 'sqm', colX[5] + 5, y, 8);
+      // Box - center aligned
+      const boxText = item.box || '-';
+      const boxWidth = font.widthOfTextAtSize(boxText, 8);
+      drawText(boxText, colX[2] + (colWidths[2] - boxWidth) / 2, y, 8);
 
-      // Disc% (percentage) - formatted to 2 decimal places
+      // Pc - center aligned
+      const pcText = item.pec || item.pc || '-';
+      const pcWidth = font.widthOfTextAtSize(pcText, 8);
+      drawText(pcText, colX[3] + (colWidths[3] - pcWidth) / 2, y, 8);
+
+      // Qty - center aligned
+      const qtyText = item.quantity || item.qty || '-';
+      const qtyWidth = font.widthOfTextAtSize(qtyText.toString(), 8);
+      drawText(qtyText.toString(), colX[4] + (colWidths[4] - qtyWidth) / 2, y, 8);
+
+      // Uom - center aligned
+      const uomText = item.uom || 'sqm';
+      const uomWidth = font.widthOfTextAtSize(uomText, 8);
+      drawText(uomText, colX[5] + (colWidths[5] - uomWidth) / 2, y, 8);
+
+      // Rate - right aligned
+      const rate = parseFloat(item.rate || 0);
+      const rateStr = rate.toFixed(2);
+      const rateWidth = font.widthOfTextAtSize(rateStr, 8);
+      drawText(rateStr, colX[6] + colWidths[6] - rateWidth - 2, y, 8);
+
+      // Disc% - center aligned
       const discPercent = parseFloat(item.discount_percent * 100 || 0);
-      drawText(discPercent.toFixed(2), colX[6] + 5, y, 8);
+      const discStr = discPercent.toFixed(2);
+      const discWidth = font.widthOfTextAtSize(discStr, 8);
+      drawText(discStr, colX[7] + (colWidths[7] - discWidth) / 2, y, 8);
 
-      // Calculate Disc Value (actual discount amount)
-      // const qty = parseFloat(item.quantity || item.qty || 0);
-      // const unitPrice = parseFloat(item.unit_price || item.rate || 0);
-      // const discValue = (qty * unitPrice * discPercent) / 100;
-      // const discValueStr = discValue.toLocaleString('en-PK', {
-      //   minimumFractionDigits: 2,
-      //   maximumFractionDigits: 2,
-      // });
-      drawText(Math.floor(item.discount_value) || '-', colX[7] + 2, y, 8);
-
+      // Amount - right aligned
       const netValue = parseFloat(item.net_value || 0);
       const amountStr = netValue.toLocaleString('en-PK', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
-
       const amountWidth = font.widthOfTextAtSize(amountStr, 8);
       drawText(amountStr, colX[8] + colWidths[8] - amountWidth - 5, y, 8);
 
+      totalAmount += netValue;
+
+      y -= rowHeight;
+
+      if (i < items.length - 1) {
+        drawLine(50, y + 10, width - 50, y + 10, 0.5);
+      }
+
       if (item.long_description) {
-        y -= 10;
         drawText(
           item.long_description,
           colX[1],
@@ -265,10 +298,11 @@ export const generatePDF = async (header, items) => {
           font,
           rgb(0.4, 0.4, 0.4),
         );
+        y -= 10;
+        if (i < items.length - 1) {
+          drawLine(50, y + 6, width - 50, y + 6, 0.5);
+        }
       }
-
-      y -= 12;
-      totalAmount += netValue;
     }
 
     y -= 5;
@@ -347,11 +381,12 @@ export const generatePDF = async (header, items) => {
       y -= 12;
     });
 
-    y -= 15;
+    y -= 50;
 
     // --- Signatures ---
     const sigY = y;
-    drawText('FAIZAN', 100, sigY);
+    const preparedByName = header.real_name || 'N/A';
+    drawText(preparedByName, 100, sigY);
     drawLine(80, sigY - 5, 180, sigY - 5);
     drawText('Prepared By', 100, sigY - 15, 8);
 

@@ -17,6 +17,7 @@ import Toast from 'react-native-toast-message';
 import Share from 'react-native-share';
 import { generatePDF } from '../utils/PDFGenerator';
 import { decode } from 'base-64';
+import { useSelector } from 'react-redux';
 
 if (typeof atob === 'undefined') {
   global.atob = decode;
@@ -24,6 +25,9 @@ if (typeof atob === 'undefined') {
 
 const InquiryScreen = ({ navigation }) => {
   const { loadCartFromOrder } = useCart();
+  const currentData = useSelector(state => state.Data?.currentData);
+  const real_name = currentData?.real_name;
+  
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -177,7 +181,12 @@ const InquiryScreen = ({ navigation }) => {
       if (!headerData) {
         throw new Error('Could not fetch order details');
       }
-      const filePath = await generatePDF(headerData, detailsData);
+      // Add real_name from Redux to headerData
+      const headerWithRealName = {
+        ...headerData,
+        real_name: real_name,
+      };
+      const filePath = await generatePDF(headerWithRealName, detailsData);
 
       const shareUrl = `file://${filePath}`;
 

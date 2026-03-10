@@ -108,8 +108,22 @@ export const generatePDF = async (header, items) => {
       rgb(0.6, 0.6, 0.6),
     );
 
-    drawText(header.location_name, 50, y, 10, boldFont);
-    y -= 12;
+    // Wrap location name if too long
+    const locationName = header.location_name || '';
+    if (locationName.length > 40) {
+      const line1 = locationName.substring(0, 40);
+      const line2 = locationName.substring(40, 80);
+      drawText(line1, 50, y, 10, boldFont);
+      y -= 12;
+      if (line2) {
+        drawText(line2 + (locationName.length > 80 ? '...' : ''), 50, y, 10, boldFont);
+        y -= 12;
+      }
+    } else {
+      drawText(locationName, 50, y, 10, boldFont);
+      y -= 12;
+    }
+    
     drawText(header.location_address || '', 50, y, 8);
     y -= 20;
 
@@ -332,6 +346,11 @@ export const generatePDF = async (header, items) => {
     // --- Totals Section ---
     y -= 20;
 
+    // Calculate total discount from all items
+    const totalDiscount = items.reduce((sum, item) => {
+      return sum + parseFloat(item.discount_value || 0);
+    }, 0);
+
     const discount = parseFloat(header.discount || 0);
     const finalTotal = totalAmount - discount;
     const formatNum = n =>
@@ -344,8 +363,8 @@ export const generatePDF = async (header, items) => {
     const valueX = 490;
 
     drawText('Discount', labelX, y, 8, boldFont);
-    let valWidth = font.widthOfTextAtSize(formatNum(discount), 8);
-    drawText(formatNum(discount), valueX + colWidths[8] - valWidth - 5, y, 8);
+    let valWidth = font.widthOfTextAtSize(formatNum(totalDiscount), 8);
+    drawText(formatNum(totalDiscount), valueX + colWidths[8] - valWidth - 5, y, 8);
     y -= 12;
 
     drawText('QUOTATION TOTAL', labelX - 20, y, 9, boldFont);

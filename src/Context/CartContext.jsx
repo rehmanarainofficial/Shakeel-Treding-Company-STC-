@@ -9,6 +9,8 @@ export const CartProvider = ({ children }) => {
   const [customerInfo, setCustomerInfo] = useState(null);
   const [updateId, setUpdateId] = useState('0');
   const { id } = useSelector(state => state.Data.currentData);
+  console.log(id);
+  
 
   const addToCart = (productData, quantityInfo) => {
     const cartItem = {
@@ -102,9 +104,6 @@ export const CartProvider = ({ children }) => {
       if (cartItems.length === 0) {
         throw new Error('Cart is empty');
       }
-
-      const currentUserId = id;
-
       const sales_order_details = cartItems.map(item => {
         const box = parseFloat(item.boxes) || 0;
         const pec = parseFloat(item.pieces) || 0;
@@ -163,7 +162,7 @@ export const CartProvider = ({ children }) => {
       formData.append('total', total.toFixed(2));
 
       formData.append('so_advance', orderData.so_advance || '0');
-      formData.append('user_id', currentUserId.toString());
+      formData.append('user_id', id.toString());
       formData.append(
         'sales_order_details',
         JSON.stringify(sales_order_details),
@@ -182,6 +181,7 @@ export const CartProvider = ({ children }) => {
         method: 'POST',
         body: formData,
       });
+      console.log(formData);
 
       const result = await response.json();
 

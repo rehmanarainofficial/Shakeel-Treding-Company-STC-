@@ -166,6 +166,7 @@ const InquiryScreen = ({ navigation }) => {
       });
 
       const result = await response.json();
+      console.log(result);
 
       let headerData = null;
       let detailsData = [];

@@ -125,7 +125,9 @@ const InquiryScreen = ({ navigation }) => {
       console.log("pending_quotation_item",result);
 
       if (result.status === 'true' && result.data) {
-        loadCartFromOrder(result.data, result.header_data?.[0]);
+        // Use data_header if header_data is not available
+        const headerData = result.header_data?.[0] || result.data_header?.[0];
+        loadCartFromOrder(result.data, headerData);
         Toast.show({
           type: 'success',
           text1: 'Order Loaded',

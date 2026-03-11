@@ -21,14 +21,17 @@ const CartScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [contactNo, setContactNo] = useState('');
   const [documentType, setDocumentType] = useState('Quotation');
-  console.log(cartItems);
+  const [overallDiscount, setOverallDiscount] = useState('');
   
 
   useEffect(() => {
+    console.log('CartScreen customerInfo:', customerInfo);
     if (customerInfo) {
       setName(customerInfo.name || '');
       setContactNo(customerInfo.contactNo || '');
       setDocumentType(customerInfo.documentType || 'Quotation');
+      console.log('Setting overallDiscount:', customerInfo.overallDiscount);
+      setOverallDiscount(customerInfo.overallDiscount || '');
     }
   }, [customerInfo]);
 
@@ -113,6 +116,7 @@ const CartScreen = ({ navigation }) => {
         customer_name: name.trim(),
         contact_number: contactNo.trim(),
         document_type: documentType,
+        discount1: overallDiscount.trim() || '0',
       };
 
       const result = await submitOrder(orderData);
@@ -130,6 +134,7 @@ const CartScreen = ({ navigation }) => {
       setCustomerModalVisible(false);
       setName('');
       setContactNo('');
+      setOverallDiscount('');
       navigation.navigate('MainTabs', { screen: 'Dashboard' });
     } catch (error) {
       console.error('Order submission error:', error);
@@ -375,6 +380,19 @@ const CartScreen = ({ navigation }) => {
                 placeholderTextColor={colors.textSecondary}
                 editable={!isSubmitting}
                 maxLength={15}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Overall Discount</Text>
+              <TextInput
+                style={styles.input}
+                value={overallDiscount}
+                onChangeText={setOverallDiscount}
+                keyboardType="numeric"
+                placeholder="Enter overall discount amount"
+                placeholderTextColor={colors.textSecondary}
+                editable={!isSubmitting}
               />
             </View>
 

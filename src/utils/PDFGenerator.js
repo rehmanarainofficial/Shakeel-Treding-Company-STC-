@@ -249,10 +249,23 @@ export const generatePDF = async (header, items) => {
       const srWidth = font.widthOfTextAtSize(srText, 8);
       drawText(srText, colX[0] + (colWidths[0] - srWidth) / 2, y, 8);
 
-      // Product - left aligned
+      // Product - left aligned with wrapping
       let desc = item.description || '';
-      if (desc.length > 30) desc = desc.substring(0, 27) + '...';
-      drawText(desc, colX[1], y, 8);
+      const maxCharsPerLine = 28;
+      const maxLines = 2;
+      
+      if (desc.length > maxCharsPerLine) {
+        const line1 = desc.substring(0, maxCharsPerLine);
+        const line2 = desc.substring(maxCharsPerLine, maxCharsPerLine * 2);
+        
+        drawText(line1, colX[1], y + 3, 8);
+        if (line2) {
+          const displayLine2 = line2.length > maxCharsPerLine ? line2.substring(0, maxCharsPerLine - 3) + '...' : line2;
+          drawText(displayLine2, colX[1], y - 7, 8);
+        }
+      } else {
+        drawText(desc, colX[1], y, 8);
+      }
 
       // Box - center aligned
       const boxText = item.box || '-';
@@ -346,13 +359,14 @@ export const generatePDF = async (header, items) => {
     // --- Totals Section ---
     y -= 20;
 
-    // Calculate total discount from all items
-    const totalDiscount = items.reduce((sum, item) => {
+    // Calculate total discount from all items + header discount
+    const itemsDiscount = items.reduce((sum, item) => {
       return sum + parseFloat(item.discount_value || 0);
     }, 0);
+    const headerDiscount = parseFloat(header.discount || 0);
+    const totalDiscount = itemsDiscount + headerDiscount;
 
-    const discount = parseFloat(header.discount || 0);
-    const finalTotal = totalAmount - discount;
+    const finalTotal = totalAmount - totalDiscount;
     const formatNum = n =>
       n.toLocaleString('en-PK', {
         minimumFractionDigits: 2,

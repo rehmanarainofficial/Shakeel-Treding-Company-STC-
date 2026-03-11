@@ -9,10 +9,16 @@ export const CartProvider = ({ children }) => {
   const [customerInfo, setCustomerInfo] = useState(null);
   const [updateId, setUpdateId] = useState('0');
   const { id } = useSelector(state => state.Data.currentData);
-  console.log(id);
-  
 
   const addToCart = (productData, quantityInfo) => {
+    const box = parseFloat(quantityInfo.boxes) || 0;
+    const pieces = parseFloat(quantityInfo.pieces) || 0;
+    const packing = parseFloat(productData.basicInfo?.packing) || 1;
+    const sqm = (box * packing) + (pieces * packing);
+    const sqprice = parseFloat(productData.basicInfo?.sq_price) || 0;
+    const discount = parseFloat(quantityInfo.discount) || 0;
+    
+    
     const cartItem = {
       id: Date.now().toString(),
       productId: productData.stockId || productData.id,
@@ -21,6 +27,9 @@ export const CartProvider = ({ children }) => {
       basicInfo: productData.basicInfo,
       uom: quantityInfo.uom || productData.basicInfo?.units || '',
       ...quantityInfo,
+      sqprice: sqprice.toString(),
+      sqm: sqm.toString(),
+      discount: discount.toString(),
       productData: productData,
       addedAt: new Date().toISOString(),
     };
@@ -94,6 +103,7 @@ export const CartProvider = ({ children }) => {
         name: headerData.name,
         contactNo: headerData.contact_no,
         documentType: headerData.type === '32' ? 'Quotation' : 'Order',
+        overallDiscount: headerData.discount1 || '',
       });
       setUpdateId(headerData.order_no || '0');
     } else {
@@ -174,7 +184,7 @@ export const CartProvider = ({ children }) => {
 
       formData.append('update_id', updateId);
       formData.append('comments', '');
-      formData.append('discount1', '0');
+      formData.append('discount1', orderData.discount1 || '0');
 
       formData.append('f_time', formattedTime);
       formData.append('order_type', '1');
@@ -183,7 +193,6 @@ export const CartProvider = ({ children }) => {
         method: 'POST',
         body: formData,
       });
-      console.log(formData);
 
       const result = await response.json();
 

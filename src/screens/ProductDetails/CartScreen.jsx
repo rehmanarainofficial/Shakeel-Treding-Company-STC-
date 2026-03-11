@@ -21,6 +21,8 @@ const CartScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [contactNo, setContactNo] = useState('');
   const [documentType, setDocumentType] = useState('Quotation');
+  console.log(cartItems);
+  
 
   useEffect(() => {
     if (customerInfo) {
@@ -30,25 +32,33 @@ const CartScreen = ({ navigation }) => {
     }
   }, [customerInfo]);
 
+  const calculateItemTotal = (item) => {
+    const sqprice = parseFloat(item.sqprice) || 0;
+    const sqm = parseFloat(item.sqm) || 0;
+    const discount = parseFloat(item.discount) || 0;
+    
+    // Formula: (sqprice * sqm) - (discount * sqm)
+    const grossAmount = sqprice * sqm;
+    const discountAmount = discount * sqm;
+    const netTotal = grossAmount - discountAmount;
+    
+    return netTotal > 0 ? netTotal : 0;
+  };
+
   const calculateTotals = () => {
     let total = 0;
 
     cartItems.forEach(item => {
-      const box = parseFloat(item.boxes) || 0;
-      const pec = parseFloat(item.pieces) || 0;
-      const unit_price = parseFloat(item.price) || 0;
-      const pc_packing = parseFloat(item.basicInfo?.packing) || 1;
-      const quantity = box * pc_packing + pec * pc_packing;
-      total += quantity * unit_price;
+      total += calculateItemTotal(item);
     });
 
     return {
       totalBoxes: cartItems.reduce(
-        (sum, item) => sum + (parseInt(item.boxes) || 0),
+        (sum, item) => sum + (parseInt(item.boxes) || parseInt(item.box) || 0),
         0,
       ),
       totalPieces: cartItems.reduce(
-        (sum, item) => sum + (parseInt(item.pieces) || 0),
+        (sum, item) => sum + (parseInt(item.pieces) || parseInt(item.pec) || 0),
         0,
       ),
       totalAmount: total,
@@ -186,12 +196,7 @@ const CartScreen = ({ navigation }) => {
 
         <View style={styles.itemsContainer}>
           {cartItems.map((item, index) => {
-            const box = parseFloat(item.boxes) || 0;
-            const pec = parseFloat(item.pieces) || 0;
-            const unit_price = parseFloat(item.price) || 0;
-            const pc_packing = parseFloat(item.basicInfo?.packing) || 1;
-            const sqr_m = box * pc_packing + pec * pc_packing;
-            const itemTotal = sqr_m * unit_price;
+            const itemTotal = calculateItemTotal(item);
 
             return (
               <View key={item.id} style={styles.cartItem}>

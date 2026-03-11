@@ -80,6 +80,8 @@ export const CartProvider = ({ children }) => {
         pieces: item.pec || item.quantity || '0',
         price: item.unit_price || '0',
         discount: item.discount_percent || '0',
+        sqprice: item.sqprice || item.unit_price || '0',
+        sqm: item.sqm || '0',
         productData: productData,
         addedAt: new Date().toISOString(),
       };
@@ -142,7 +144,7 @@ export const CartProvider = ({ children }) => {
         total +=
           parseFloat(i.quantity) *
           parseFloat(i.unit_price) *
-          (1 - parseFloat(i.discount_percent) / 100);
+          (1 - parseFloat(i.discount_percent));
       });
       const trans_type = orderData.document_type === 'Quotation' ? 32 : 30;
 

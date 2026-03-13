@@ -122,7 +122,6 @@ const InquiryScreen = ({ navigation }) => {
       });
 
       const result = await response.json();
-      console.log("pending_quotation_item",result);
 
       if (result.status === 'true' && result.data) {
         // Use data_header if header_data is not available
@@ -168,8 +167,6 @@ const InquiryScreen = ({ navigation }) => {
       });
 
       const result = await response.json();
-      console.log(result);
-
       let headerData = null;
       let detailsData = [];
 

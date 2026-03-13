@@ -25,12 +25,10 @@ const CartScreen = ({ navigation }) => {
   
 
   useEffect(() => {
-    console.log('CartScreen customerInfo:', customerInfo);
     if (customerInfo) {
       setName(customerInfo.name || '');
       setContactNo(customerInfo.contactNo || '');
       setDocumentType(customerInfo.documentType || 'Quotation');
-      console.log('Setting overallDiscount:', customerInfo.overallDiscount);
       setOverallDiscount(customerInfo.overallDiscount || '');
     }
   }, [customerInfo]);

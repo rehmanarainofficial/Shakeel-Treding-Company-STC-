@@ -68,6 +68,8 @@ const numberToWords = num => {
 };
 
 export const generatePDF = async (header, items) => {
+  console.log(items);
+  
   try {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
@@ -273,12 +275,12 @@ export const generatePDF = async (header, items) => {
       drawText(boxText, colX[2] + (colWidths[2] - boxWidth) / 2, y, 8);
 
       // Pc - center aligned
-      const pcText = item.pec || item.pc || '-';
+      const pcText = item.pec || '-';
       const pcWidth = font.widthOfTextAtSize(pcText, 8);
       drawText(pcText, colX[3] + (colWidths[3] - pcWidth) / 2, y, 8);
 
       // Qty - center aligned
-      const qtyText = item.quantity || item.qty || '-';
+      const qtyText = item.sqm || '-';
       const qtyWidth = font.widthOfTextAtSize(qtyText.toString(), 8);
       drawText(qtyText.toString(), colX[4] + (colWidths[4] - qtyWidth) / 2, y, 8);
 
@@ -289,7 +291,7 @@ export const generatePDF = async (header, items) => {
 
       // Rate - right aligned
       const rate = parseFloat(item.rate || 0);
-      const rateStr = rate.toFixed(2);
+      const rateStr = Math.floor(rate).toString();
       const rateWidth = font.widthOfTextAtSize(rateStr, 8);
       drawText(rateStr, colX[6] + colWidths[6] - rateWidth - 2, y, 8);
 

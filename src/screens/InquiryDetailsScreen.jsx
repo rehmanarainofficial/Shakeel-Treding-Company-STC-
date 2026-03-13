@@ -38,7 +38,6 @@ const InquiryDetailsScreen = ({ route, navigation }) => {
       });
 
       const result = await response.json();
-      console.log(result);
 
       if (result.status_header === 'true' && result.data_header?.length > 0) {
         setHeaderData(result.data_header[0]);

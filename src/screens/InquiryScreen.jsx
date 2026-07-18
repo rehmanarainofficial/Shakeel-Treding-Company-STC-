@@ -27,7 +27,7 @@ const InquiryScreen = ({ navigation }) => {
   const { loadCartFromOrder } = useCart();
   const currentData = useSelector(state => state.Data?.currentData);
   const real_name = currentData?.real_name;
-  
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -104,10 +104,7 @@ const InquiryScreen = ({ navigation }) => {
 
     if (isNaN(numAmount)) return 'Invalid amount';
 
-    return `${numAmount.toLocaleString('en-PK', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+    return `${Math.round(numAmount).toLocaleString('en-PK')}`;
   };
 
   const handleEditOrder = async orderNo => {

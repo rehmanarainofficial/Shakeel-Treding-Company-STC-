@@ -14,11 +14,10 @@ export const CartProvider = ({ children }) => {
     const box = parseFloat(quantityInfo.boxes) || 0;
     const pieces = parseFloat(quantityInfo.pieces) || 0;
     const packing = parseFloat(productData.basicInfo?.packing) || 1;
-    const sqm = (box * packing) + (pieces * packing);
+    const sqm = box * packing + pieces * packing;
     const sqprice = parseFloat(productData.basicInfo?.sq_price) || 0;
     const discount = parseFloat(quantityInfo.discount) || 0;
-    
-    
+
     const cartItem = {
       id: Date.now().toString(),
       productId: productData.stockId || productData.id,
@@ -171,7 +170,7 @@ export const CartProvider = ({ children }) => {
       formData.append('function_date', new Date().toISOString().split('T')[0]);
       formData.append('contact_no', orderData.contact_number || '');
       formData.append('venue', orderData.venue || '');
-      formData.append('total', total.toFixed(2));
+      formData.append('total', Math.round(total).toString());
 
       formData.append('so_advance', orderData.so_advance || '0');
       formData.append('user_id', id.toString());
@@ -221,7 +220,6 @@ export const CartProvider = ({ children }) => {
         addToCart,
         removeFromCart,
         clearCart,
-        updateCustomerInfo,
         updateCustomerInfo,
         submitOrder,
         loadCartFromOrder,

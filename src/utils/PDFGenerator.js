@@ -62,14 +62,14 @@ const numberToWords = num => {
   str +=
     n[5] != 0
       ? (str != '' ? 'and ' : '') +
-      (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]])
+        (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]])
       : '';
   return str + 'Only';
 };
 
 export const generatePDF = async (header, items) => {
   console.log(items);
-  
+
   try {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
@@ -100,6 +100,54 @@ export const generatePDF = async (header, items) => {
       });
     };
 
+    const formatRoundedNum = n =>
+      Math.round(parseFloat(n) || 0).toLocaleString('en-PK');
+
+    const wrapText = (text, fontToUse, size, maxWidth) => {
+      const words = String(text || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      const lines = [];
+      let line = '';
+
+      const pushLongWord = word => {
+        let chunk = '';
+        for (const char of word) {
+          const nextChunk = chunk + char;
+          if (fontToUse.widthOfTextAtSize(nextChunk, size) <= maxWidth) {
+            chunk = nextChunk;
+          } else {
+            if (chunk) lines.push(chunk);
+            chunk = char;
+          }
+        }
+        return chunk;
+      };
+
+      words.forEach(word => {
+        const candidate = line ? `${line} ${word}` : word;
+        if (fontToUse.widthOfTextAtSize(candidate, size) <= maxWidth) {
+          line = candidate;
+          return;
+        }
+
+        if (line) {
+          lines.push(line);
+          line = '';
+        }
+
+        if (fontToUse.widthOfTextAtSize(word, size) <= maxWidth) {
+          line = word;
+        } else {
+          line = pushLongWord(word);
+        }
+      });
+
+      if (line) lines.push(line);
+      return lines.length ? lines : [''];
+    };
+
     // --- Header ---
     drawText(
       'SALES QUOTATION',
@@ -118,14 +166,20 @@ export const generatePDF = async (header, items) => {
       drawText(line1, 50, y, 10, boldFont);
       y -= 12;
       if (line2) {
-        drawText(line2 + (locationName.length > 80 ? '...' : ''), 50, y, 10, boldFont);
+        drawText(
+          line2 + (locationName.length > 80 ? '...' : ''),
+          50,
+          y,
+          10,
+          boldFont,
+        );
         y -= 12;
       }
     } else {
       drawText(locationName, 50, y, 10, boldFont);
       y -= 12;
     }
-    
+
     drawText(header.location_address || '', 50, y, 8);
     y -= 20;
 
@@ -242,77 +296,80 @@ export const generatePDF = async (header, items) => {
 
     let totalAmount = 0;
     const rowHeight = 16;
+    const productLineHeight = 10;
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
+      const rowY = y;
 
       // Sr. - center aligned
       const srText = (i + 1).toString();
       const srWidth = font.widthOfTextAtSize(srText, 8);
-      drawText(srText, colX[0] + (colWidths[0] - srWidth) / 2, y, 8);
+      drawText(srText, colX[0] + (colWidths[0] - srWidth) / 2, rowY, 8);
 
       // Product - left aligned with wrapping
-      let desc = item.description || '';
-      const maxCharsPerLine = 28;
-      const maxLines = 2;
-      
-      if (desc.length > maxCharsPerLine) {
-        const line1 = desc.substring(0, maxCharsPerLine);
-        const line2 = desc.substring(maxCharsPerLine, maxCharsPerLine * 2);
-        
-        drawText(line1, colX[1], y + 3, 8);
-        if (line2) {
-          const displayLine2 = line2.length > maxCharsPerLine ? line2.substring(0, maxCharsPerLine - 3) + '...' : line2;
-          drawText(displayLine2, colX[1], y - 7, 8);
-        }
-      } else {
-        drawText(desc, colX[1], y, 8);
-      }
+      const descLines = wrapText(
+        item.description || '',
+        font,
+        8,
+        colWidths[1] - 8,
+      );
+      const productStartY = descLines.length > 1 ? rowY + 3 : rowY;
+      descLines.forEach((line, lineIndex) => {
+        drawText(
+          line,
+          colX[1],
+          productStartY - lineIndex * productLineHeight,
+          8,
+        );
+      });
 
       // Box - center aligned
       const boxText = item.box || '-';
       const boxWidth = font.widthOfTextAtSize(boxText, 8);
-      drawText(boxText, colX[2] + (colWidths[2] - boxWidth) / 2, y, 8);
+      drawText(boxText, colX[2] + (colWidths[2] - boxWidth) / 2, rowY, 8);
 
       // Pc - center aligned
       const pcText = item.pec || '-';
       const pcWidth = font.widthOfTextAtSize(pcText, 8);
-      drawText(pcText, colX[3] + (colWidths[3] - pcWidth) / 2, y, 8);
+      drawText(pcText, colX[3] + (colWidths[3] - pcWidth) / 2, rowY, 8);
 
       // Qty - center aligned
       const qtyText = item.sqm || '-';
       const qtyWidth = font.widthOfTextAtSize(qtyText.toString(), 8);
-      drawText(qtyText.toString(), colX[4] + (colWidths[4] - qtyWidth) / 2, y, 8);
+      drawText(
+        qtyText.toString(),
+        colX[4] + (colWidths[4] - qtyWidth) / 2,
+        rowY,
+        8,
+      );
 
       // Uom - center aligned
       const uomText = item.uom || 'sqm';
       const uomWidth = font.widthOfTextAtSize(uomText, 8);
-      drawText(uomText, colX[5] + (colWidths[5] - uomWidth) / 2, y, 8);
+      drawText(uomText, colX[5] + (colWidths[5] - uomWidth) / 2, rowY, 8);
 
       // Rate - right aligned
       const rate = parseFloat(item.rate || 0);
       const rateStr = Math.floor(rate).toString();
       const rateWidth = font.widthOfTextAtSize(rateStr, 8);
-      drawText(rateStr, colX[6] + colWidths[6] - rateWidth - 2, y, 8);
+      drawText(rateStr, colX[6] + colWidths[6] - rateWidth - 2, rowY, 8);
 
       // Disc% - center aligned
       const discPercent = parseFloat(item.discount_percent * 100 || 0);
       const discStr = discPercent.toFixed(2);
       const discWidth = font.widthOfTextAtSize(discStr, 8);
-      drawText(discStr, colX[7] + (colWidths[7] - discWidth) / 2, y, 8);
+      drawText(discStr, colX[7] + (colWidths[7] - discWidth) / 2, rowY, 8);
 
       // Amount - right aligned
       const netValue = parseFloat(item.net_value || 0);
-      const amountStr = netValue.toLocaleString('en-PK', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+      const amountStr = formatRoundedNum(netValue);
       const amountWidth = font.widthOfTextAtSize(amountStr, 8);
-      drawText(amountStr, colX[8] + colWidths[8] - amountWidth - 5, y, 8);
+      drawText(amountStr, colX[8] + colWidths[8] - amountWidth - 5, rowY, 8);
 
       totalAmount += netValue;
 
-      y -= rowHeight;
+      y -= Math.max(rowHeight, descLines.length * productLineHeight);
 
       if (i < items.length - 1) {
         drawLine(50, y + 10, width - 50, y + 10, 0.5);
@@ -361,32 +418,35 @@ export const generatePDF = async (header, items) => {
     // --- Totals Section ---
     y -= 20;
 
-    // Calculate total discount from all items + header discount
+    // Row amounts already use net_value, so item discounts are already applied.
+    // Keep item discounts visible in the summary, but do not subtract them again.
     const itemsDiscount = items.reduce((sum, item) => {
       return sum + parseFloat(item.discount_value || 0);
     }, 0);
-    const headerDiscount = parseFloat(header.discount || 0);
+    const headerDiscount =
+      parseFloat(
+        header.discount ?? header.discount1 ?? header.overallDiscount ?? 0,
+      ) || 0;
     const totalDiscount = itemsDiscount + headerDiscount;
 
-    const finalTotal = totalAmount - totalDiscount;
-    const formatNum = n =>
-      n.toLocaleString('en-PK', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-
+    const finalTotal = totalAmount - headerDiscount;
     const labelX = 400;
     const valueX = 490;
 
     drawText('Discount', labelX, y, 8, boldFont);
-    let valWidth = font.widthOfTextAtSize(formatNum(totalDiscount), 8);
-    drawText(formatNum(totalDiscount), valueX + colWidths[8] - valWidth - 5, y, 8);
+    let valWidth = font.widthOfTextAtSize(formatRoundedNum(totalDiscount), 8);
+    drawText(
+      formatRoundedNum(totalDiscount),
+      valueX + colWidths[8] - valWidth - 5,
+      y,
+      8,
+    );
     y -= 12;
 
     drawText('QUOTATION TOTAL', labelX - 20, y, 9, boldFont);
-    valWidth = boldFont.widthOfTextAtSize(formatNum(finalTotal), 9);
+    valWidth = boldFont.widthOfTextAtSize(formatRoundedNum(finalTotal), 9);
     drawText(
-      formatNum(finalTotal),
+      formatRoundedNum(finalTotal),
       valueX + colWidths[8] - valWidth - 5,
       y,
       9,
@@ -395,7 +455,12 @@ export const generatePDF = async (header, items) => {
 
     y -= 20;
 
-    drawText(`Amount in words: ${numberToWords(finalTotal)}`, 50, y, 8);
+    drawText(
+      `Amount in words: ${numberToWords(Math.round(finalTotal))}`,
+      50,
+      y,
+      8,
+    );
     y -= 30;
 
     // --- Terms and Conditions ---

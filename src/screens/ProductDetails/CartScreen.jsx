@@ -22,7 +22,6 @@ const CartScreen = ({ navigation }) => {
   const [contactNo, setContactNo] = useState('');
   const [documentType, setDocumentType] = useState('Quotation');
   const [overallDiscount, setOverallDiscount] = useState('');
-  
 
   useEffect(() => {
     if (customerInfo) {
@@ -33,18 +32,21 @@ const CartScreen = ({ navigation }) => {
     }
   }, [customerInfo]);
 
-  const calculateItemTotal = (item) => {
+  const calculateItemTotal = item => {
     const sqprice = parseFloat(item.sqprice) || 0;
     const sqm = parseFloat(item.sqm) || 0;
     const discount = parseFloat(item.discount) || 0;
-    
+
     // Formula: (sqprice * sqm) - (discount * sqm)
     const grossAmount = sqprice * sqm;
     const discountAmount = discount * sqm;
     const netTotal = grossAmount - discountAmount;
-    
+
     return netTotal > 0 ? netTotal : 0;
   };
+
+  const formatRoundedCurrency = value =>
+    Math.round(parseFloat(value) || 0).toLocaleString('en-PK');
 
   const calculateTotals = () => {
     let total = 0;
@@ -122,9 +124,9 @@ const CartScreen = ({ navigation }) => {
       Toast.show({
         type: 'success',
         text1: `${documentType} Successful!`,
-        text2: `Order ID: ${
-          result.orderId
-        }\nTotal: ${calculateTotals().totalAmount.toLocaleString()}`,
+        text2: `Order ID: ${result.orderId}\nTotal: ${formatRoundedCurrency(
+          calculateTotals().totalAmount,
+        )}`,
         position: 'bottom',
         visibilityTime: 4000,
       });
@@ -281,7 +283,7 @@ const CartScreen = ({ navigation }) => {
                     />
                     <DetailItem
                       label="Total"
-                      value={`${itemTotal.toLocaleString()}`}
+                      value={formatRoundedCurrency(itemTotal)}
                     />
                   </View>
                 </View>
@@ -315,7 +317,7 @@ const CartScreen = ({ navigation }) => {
           <View style={[styles.summaryRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total Amount:</Text>
             <Text style={styles.totalValue}>
-              {totals.totalAmount.toLocaleString()}
+              {formatRoundedCurrency(totals.totalAmount)}
             </Text>
           </View>
         </View>

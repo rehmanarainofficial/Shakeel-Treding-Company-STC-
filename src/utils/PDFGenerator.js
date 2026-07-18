@@ -68,7 +68,8 @@ const numberToWords = num => {
 };
 
 export const generatePDF = async (header, items) => {
-  console.log(items);
+  console.log('items', items);
+  console.log('header', header);
 
   try {
     const pdfDoc = await PDFDocument.create();
@@ -183,7 +184,7 @@ export const generatePDF = async (header, items) => {
     drawText(header.location_address || '', 50, y, 8);
     y -= 20;
 
-    const dateStr = header.trans_date || new Date().toLocaleDateString('en-GB');
+    const dateStr = header.trans_date;
     const quoteNo = header.reference || '';
 
     const rightColLabel = width - 200;
@@ -205,7 +206,7 @@ export const generatePDF = async (header, items) => {
     y -= 15;
     drawText(header.name || 'N/A', 50, y, 10, boldFont);
     y -= 12;
-    drawText(header.phone || header.customer_contact_no || '', 50, y, 10);
+    drawText(header.customer_contact_no, 50, y, 10);
     y -= 25;
 
     // --- Sales Person Box ---
@@ -271,7 +272,6 @@ export const generatePDF = async (header, items) => {
     ];
     headers.forEach((h, i) => {
       let xPos = colX[i];
-      // Center align headers for numeric columns
       if (i >= 2 && i <= 7) {
         const textWidth = boldFont.widthOfTextAtSize(h, 8);
         xPos = colX[i] + (colWidths[i] - textWidth) / 2;
@@ -345,7 +345,7 @@ export const generatePDF = async (header, items) => {
       );
 
       // Uom - center aligned
-      const uomText = item.uom || 'sqm';
+      const uomText = item.units || '';
       const uomWidth = font.widthOfTextAtSize(uomText, 8);
       drawText(uomText, colX[5] + (colWidths[5] - uomWidth) / 2, rowY, 8);
 
@@ -418,23 +418,25 @@ export const generatePDF = async (header, items) => {
     // --- Totals Section ---
     y -= 20;
 
-    // Row amounts already use net_value, so item discounts are already applied.
-    // Keep item discounts visible in the summary, but do not subtract them again.
-    const itemsDiscount = items.reduce((sum, item) => {
-      return sum + parseFloat(item.discount_value || 0);
-    }, 0);
-    const headerDiscount =
-      parseFloat(
-        header.discount ?? header.discount1 ?? header.overallDiscount ?? 0,
-      ) || 0;
-    const totalDiscount = itemsDiscount + headerDiscount;
+    const subtotal = totalAmount;
+    const totalDiscount = parseFloat(header.discount) || 0;
 
-    const finalTotal = totalAmount - headerDiscount;
+    const finalTotal = subtotal - totalDiscount;
     const labelX = 400;
     const valueX = 490;
 
-    drawText('Discount', labelX, y, 8, boldFont);
-    let valWidth = font.widthOfTextAtSize(formatRoundedNum(totalDiscount), 8);
+    drawText('Subtotal', labelX, y, 8, boldFont);
+    let valWidth = font.widthOfTextAtSize(formatRoundedNum(subtotal), 8);
+    drawText(
+      formatRoundedNum(subtotal),
+      valueX + colWidths[8] - valWidth - 5,
+      y,
+      8,
+    );
+    y -= 12;
+
+    drawText('Further Discount', labelX, y, 8, boldFont);
+    valWidth = font.widthOfTextAtSize(formatRoundedNum(totalDiscount), 8);
     drawText(
       formatRoundedNum(totalDiscount),
       valueX + colWidths[8] - valWidth - 5,

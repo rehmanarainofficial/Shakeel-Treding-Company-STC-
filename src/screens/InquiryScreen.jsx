@@ -121,7 +121,6 @@ const InquiryScreen = ({ navigation }) => {
       const result = await response.json();
 
       if (result.status === 'true' && result.data) {
-        // Use data_header if header_data is not available
         const headerData = result.header_data?.[0] || result.data_header?.[0];
         loadCartFromOrder(result.data, headerData);
         Toast.show({
@@ -164,6 +163,7 @@ const InquiryScreen = ({ navigation }) => {
       });
 
       const result = await response.json();
+      console.log('response', result);
       let headerData = null;
       let detailsData = [];
 
@@ -178,7 +178,6 @@ const InquiryScreen = ({ navigation }) => {
       if (!headerData) {
         throw new Error('Could not fetch order details');
       }
-      // Add real_name from Redux to headerData
       const headerWithRealName = {
         ...headerData,
         real_name: real_name,

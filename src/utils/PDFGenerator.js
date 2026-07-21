@@ -253,10 +253,6 @@ export const generatePDF = async (header, items) => {
 
     // --- Items Table ---
     const tableTop = y;
-    // Column positions: Sr, Item, Packing, Box, Pc, Qty, Uom, Rate, Gross Value, Discounted Rate, Discount, Discounted Value
-    // Page width = 595.28, margins 50 left/right => usable = 495.28
-    // Widths: 20, 130, 40, 28, 28, 35, 30, 38, 45, 45, 38, 48 = 525... too wide
-    // Let's use: 20+120+38+25+25+33+28+36+42+42+36+50 = 495
     const colX =      [50,  70, 190, 228, 253, 278, 311, 339, 375, 417, 459, 495];
     const colWidths = [20, 120,  38,  25,  25,  33,  28,  36,  42,  42,  36,  50];
 
@@ -489,7 +485,7 @@ export const generatePDF = async (header, items) => {
     drawText(gvStr, colX[9] - gvW - 2, totRow1Y + 4, 8);
 
     // Discount total — right aligned in col 10 (DISCOUNT column)
-    const discTotStr = `- ${formatRoundedNum(totalDiscount)}`;
+    const discTotStr = `${formatRoundedNum(totalDiscount)}`;
     const discTotW = font.widthOfTextAtSize(discTotStr, 8);
     drawText(discTotStr, colX[11] - discTotW - 2, totRow1Y + 4, 8);
 

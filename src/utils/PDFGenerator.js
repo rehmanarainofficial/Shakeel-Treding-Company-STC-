@@ -70,6 +70,12 @@ const numberToWords = num => {
 export const generatePDF = async (header, items) => {
   console.log('items', items);
   console.log('header', header);
+  // DEBUG: shows exact field names from API for first item
+  if (items && items.length > 0) {
+    console.log('=== ITEM FIELDS (for fixing 0 values) ===');
+    Object.entries(items[0]).forEach(([key, val]) => console.log(`  ${key}: ${val}`));
+    console.log('==========================================');
+  }
 
   try {
     const pdfDoc = await PDFDocument.create();
@@ -247,54 +253,64 @@ export const generatePDF = async (header, items) => {
 
     // --- Items Table ---
     const tableTop = y;
-    // Column positions: Sr, Product, Box, Pc, Qty, Uom, Rate, Disc%, Amount
-    const colX = [50, 75, 265, 295, 325, 360, 400, 440, 480];
-    const colWidths = [25, 190, 30, 30, 35, 40, 40, 40, 55];
+    // Column positions: Sr, Item, Packing, Box, Pc, Qty, Uom, Rate, Gross Value, Discounted Rate, Discount, Discounted Value
+    // Page width = 595.28, margins 50 left/right => usable = 495.28
+    // Widths: 20, 130, 40, 28, 28, 35, 30, 38, 45, 45, 38, 48 = 525... too wide
+    // Let's use: 20+120+38+25+25+33+28+36+42+42+36+50 = 495
+    const colX =      [50,  70, 190, 228, 253, 278, 311, 339, 375, 417, 459, 495];
+    const colWidths = [20, 120,  38,  25,  25,  33,  28,  36,  42,  42,  36,  50];
 
+    // Header row - two lines for long headers
+    const headerRowHeight = 22;
     page.drawRectangle({
       x: 50,
-      y: y - 15,
+      y: y - headerRowHeight,
       width: width - 100,
-      height: 15,
+      height: headerRowHeight,
       color: rgb(0.85, 0.85, 0.85),
     });
 
-    const headers = [
-      'Sr.',
-      'Product',
-      'Box',
-      'Pc',
-      'Qty',
-      'Uom',
-      'Rate',
-      'Disc%',
-      'Amount',
+    const tableHeaders = [
+      { line1: 'SR', line2: '' },
+      { line1: 'ITEM', line2: '' },
+      { line1: 'PACKING', line2: '' },
+      { line1: 'BOX', line2: '' },
+      { line1: 'PC', line2: '' },
+      { line1: 'QTY', line2: '' },
+      { line1: 'UOM', line2: '' },
+      { line1: 'RATE', line2: '' },
+      { line1: 'GROSS', line2: 'VALUE' },
+      { line1: 'DISCOUNTED', line2: 'RATE' },
+      { line1: 'DISCOUNT', line2: '' },
+      { line1: 'TOTAL', line2: 'VALUE' },
     ];
-    headers.forEach((h, i) => {
-      let xPos = colX[i];
-      if (i >= 2 && i <= 7) {
-        const textWidth = boldFont.widthOfTextAtSize(h, 8);
-        xPos = colX[i] + (colWidths[i] - textWidth) / 2;
+
+    tableHeaders.forEach((h, i) => {
+      const hasTwo = !!h.line2;
+      const topY = hasTwo ? y - 8 : y - 14;
+      const w1 = boldFont.widthOfTextAtSize(h.line1, 6);
+      const xCenter = colX[i] + colWidths[i] / 2;
+      drawText(h.line1, xCenter - w1 / 2, topY, 6, boldFont);
+      if (hasTwo) {
+        const w2 = boldFont.widthOfTextAtSize(h.line2, 6);
+        drawText(h.line2, xCenter - w2 / 2, topY - 8, 6, boldFont);
       }
-      if (i === 8) {
-        const textWidth = boldFont.widthOfTextAtSize(h, 8);
-        xPos = colX[i] + colWidths[i] - textWidth - 5;
-      }
-      drawText(h, xPos, y - 11, 8, boldFont);
     });
 
     page.drawRectangle({
       x: 50,
-      y: y - 15,
+      y: y - headerRowHeight,
       width: width - 100,
-      height: 15,
+      height: headerRowHeight,
       borderColor: rgb(0, 0, 0),
       borderWidth: 1,
     });
 
-    y -= 25;
+    y -= headerRowHeight + 8;
 
-    let totalAmount = 0;
+    let totalGrossValue = 0;
+    let totalDiscount = 0;
+    let totalDiscountedValue = 0;
     const rowHeight = 16;
     const productLineHeight = 10;
 
@@ -302,72 +318,89 @@ export const generatePDF = async (header, items) => {
       const item = items[i];
       const rowY = y;
 
-      // Sr. - center aligned
+      // Col 0: SR - center aligned
       const srText = (i + 1).toString();
       const srWidth = font.widthOfTextAtSize(srText, 8);
       drawText(srText, colX[0] + (colWidths[0] - srWidth) / 2, rowY, 8);
 
-      // Product - left aligned with wrapping
+      // Col 1: ITEM - left aligned with wrapping
       const descLines = wrapText(
         item.description || '',
         font,
-        8,
-        colWidths[1] - 8,
+        7,
+        colWidths[1] - 4,
       );
       const productStartY = descLines.length > 1 ? rowY + 3 : rowY;
       descLines.forEach((line, lineIndex) => {
         drawText(
           line,
-          colX[1],
+          colX[1] + 2,
           productStartY - lineIndex * productLineHeight,
-          8,
+          7,
         );
       });
 
-      // Box - center aligned
-      const boxText = item.box || '-';
-      const boxWidth = font.widthOfTextAtSize(boxText, 8);
-      drawText(boxText, colX[2] + (colWidths[2] - boxWidth) / 2, rowY, 8);
+      // Col 2: PACKING - sqm per box (sqm / box), center aligned
+      const boxCount = parseFloat(item.box || 1);
+      const sqmVal = parseFloat(item.sqm || 0);
+      const packingVal = boxCount > 0 ? (sqmVal / boxCount).toFixed(2) : sqmVal.toFixed(2);
+      const packingText = String(packingVal);
+      const packingWidth = font.widthOfTextAtSize(packingText, 8);
+      drawText(packingText, colX[2] + (colWidths[2] - packingWidth) / 2, rowY, 8);
 
-      // Pc - center aligned
-      const pcText = item.pec || '-';
+      // Col 3: BOX - center aligned
+      const boxText = String(item.box || '-');
+      const boxTxtWidth = font.widthOfTextAtSize(boxText, 8);
+      drawText(boxText, colX[3] + (colWidths[3] - boxTxtWidth) / 2, rowY, 8);
+
+      // Col 4: PC - center aligned
+      const pcText = String(item.pec || '-');
       const pcWidth = font.widthOfTextAtSize(pcText, 8);
-      drawText(pcText, colX[3] + (colWidths[3] - pcWidth) / 2, rowY, 8);
+      drawText(pcText, colX[4] + (colWidths[4] - pcWidth) / 2, rowY, 8);
 
-      // Qty - center aligned
-      const qtyText = item.sqm || '-';
-      const qtyWidth = font.widthOfTextAtSize(qtyText.toString(), 8);
-      drawText(
-        qtyText.toString(),
-        colX[4] + (colWidths[4] - qtyWidth) / 2,
-        rowY,
-        8,
-      );
+      // Col 5: QTY - center aligned (sqm = total area)
+      const qtyText = String(item.sqm || '-');
+      const qtyWidth = font.widthOfTextAtSize(qtyText, 8);
+      drawText(qtyText, colX[5] + (colWidths[5] - qtyWidth) / 2, rowY, 8);
 
-      // Uom - center aligned
-      const uomText = item.units || '';
+      // Col 6: UOM - center aligned
+      const uomText = String(item.units || '');
       const uomWidth = font.widthOfTextAtSize(uomText, 8);
-      drawText(uomText, colX[5] + (colWidths[5] - uomWidth) / 2, rowY, 8);
+      drawText(uomText, colX[6] + (colWidths[6] - uomWidth) / 2, rowY, 8);
 
-      // Rate - right aligned
-      const rate = parseFloat(item.rate || 0);
-      const rateStr = Math.floor(rate).toString();
+      // Col 7: RATE (gross/list rate = unit_price) - right aligned
+      const rate = parseFloat(item.unit_price || item.rate || 0);
+      const rateStr = Math.round(rate).toLocaleString('en-PK');
       const rateWidth = font.widthOfTextAtSize(rateStr, 8);
-      drawText(rateStr, colX[6] + colWidths[6] - rateWidth - 2, rowY, 8);
+      drawText(rateStr, colX[7] + colWidths[7] - rateWidth - 2, rowY, 8);
 
-      // Disc% - center aligned
-      const discPercent = parseFloat(item.discount_percent * 100 || 0);
-      const discStr = discPercent.toFixed(2);
-      const discWidth = font.widthOfTextAtSize(discStr, 8);
-      drawText(discStr, colX[7] + (colWidths[7] - discWidth) / 2, rowY, 8);
-
-      // Amount - right aligned
+      // Col 8: GROSS VALUE = net_value + discount_value - right aligned
       const netValue = parseFloat(item.net_value || 0);
-      const amountStr = formatRoundedNum(netValue);
-      const amountWidth = font.widthOfTextAtSize(amountStr, 8);
-      drawText(amountStr, colX[8] + colWidths[8] - amountWidth - 5, rowY, 8);
+      const discountVal = parseFloat(item.discount_value || 0);
+      const grossValue = netValue + discountVal;
+      const grossStr = formatRoundedNum(grossValue);
+      const grossWidth = font.widthOfTextAtSize(grossStr, 8);
+      drawText(grossStr, colX[8] + colWidths[8] - grossWidth - 2, rowY, 8);
 
-      totalAmount += netValue;
+      // Col 9: DISCOUNTED RATE = item.rate (actual selling rate) - right aligned
+      const discountedRate = parseFloat(item.rate || item.sqprice || 0);
+      const discRateStr = Math.round(discountedRate).toLocaleString('en-PK');
+      const discRateWidth = font.widthOfTextAtSize(discRateStr, 8);
+      drawText(discRateStr, colX[9] + colWidths[9] - discRateWidth - 2, rowY, 8);
+
+      // Col 10: DISCOUNT = discount_value - right aligned
+      const discAmtStr = formatRoundedNum(discountVal);
+      const discAmtWidth = font.widthOfTextAtSize(discAmtStr, 8);
+      drawText(discAmtStr, colX[10] + colWidths[10] - discAmtWidth - 2, rowY, 8);
+
+      // Col 11: TOTAL VALUE = net_value - right aligned
+      const netStr = formatRoundedNum(netValue);
+      const netWidth = font.widthOfTextAtSize(netStr, 8);
+      drawText(netStr, colX[11] + colWidths[11] - netWidth - 2, rowY, 8);
+
+      totalGrossValue += grossValue;
+      totalDiscount += discountVal;
+      totalDiscountedValue += netValue;
 
       y -= Math.max(rowHeight, descLines.length * productLineHeight);
 
@@ -378,7 +411,7 @@ export const generatePDF = async (header, items) => {
       if (item.long_description) {
         drawText(
           item.long_description,
-          colX[1],
+          colX[1] + 2,
           y,
           7,
           font,
@@ -393,7 +426,7 @@ export const generatePDF = async (header, items) => {
 
     y -= 5;
     const tableBottom = y;
-    const tableHeight = tableTop - 15 - tableBottom;
+    const tableHeight = tableTop - headerRowHeight - tableBottom;
 
     page.drawRectangle({
       x: 50,
@@ -404,59 +437,111 @@ export const generatePDF = async (header, items) => {
       borderWidth: 1,
     });
 
-    const drawLineVert = x => drawLine(x, tableTop - 15, x, tableBottom);
+    const drawLineVert = x => drawLine(x, tableTop - headerRowHeight, x, tableBottom);
 
-    drawLineVert(colX[1] - 2);
-    drawLineVert(colX[2] - 2);
-    drawLineVert(colX[3] - 2);
-    drawLineVert(colX[4] - 2);
-    drawLineVert(colX[5] - 2);
-    drawLineVert(colX[6] - 2);
-    drawLineVert(colX[7] - 2);
-    drawLineVert(colX[8] - 2);
+    drawLineVert(colX[1]);
+    drawLineVert(colX[2]);
+    drawLineVert(colX[3]);
+    drawLineVert(colX[4]);
+    drawLineVert(colX[5]);
+    drawLineVert(colX[6]);
+    drawLineVert(colX[7]);
+    drawLineVert(colX[8]);
+    drawLineVert(colX[9]);
+    drawLineVert(colX[10]);
+    drawLineVert(colX[11]);
 
-    // --- Totals Section ---
-    y -= 20;
+    // --- Totals Section (matches image layout) ---
+    // Total box spans last 4 columns: Gross Value, Discounted Rate, Discount, Discounted Value
+    // col indices: 8(Gross), 9(Disc Rate), 10(Discount), 11(Disc Value)
+    const furtherDiscount = parseFloat(header.discount) || 0;
+    const finalTotal = totalDiscountedValue - furtherDiscount;
 
-    const subtotal = totalAmount;
-    const totalDiscount = parseFloat(header.discount) || 0;
+    const totBoxX = colX[8];                          // start of Gross Value col
+    const totBoxRight = colX[11] + colWidths[11];     // right edge of table = width-50
+    const totBoxWidth = totBoxRight - totBoxX;        // total box width
 
-    const finalTotal = subtotal - totalDiscount;
-    const labelX = 400;
-    const valueX = 490;
+    // Row heights
+    const totRowH = 14;
+    y -= 5;
 
-    drawText('Subtotal', labelX, y, 8, boldFont);
-    let valWidth = font.widthOfTextAtSize(formatRoundedNum(subtotal), 8);
-    drawText(
-      formatRoundedNum(subtotal),
-      valueX + colWidths[8] - valWidth - 5,
-      y,
-      8,
-    );
-    y -= 12;
+    // ---- TOTAL row ----
+    const totRow1Y = y - totRowH;
+    page.drawRectangle({
+      x: totBoxX,
+      y: totRow1Y,
+      width: totBoxWidth,
+      height: totRowH,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 0.5,
+    });
+    // Internal vertical lines for TOTAL row
+    drawLine(colX[9],  y, colX[9],  totRow1Y);
+    drawLine(colX[10], y, colX[10], totRow1Y);
+    drawLine(colX[11], y, colX[11], totRow1Y);
 
-    drawText('Further Discount', labelX, y, 8, boldFont);
-    valWidth = font.widthOfTextAtSize(formatRoundedNum(totalDiscount), 8);
-    drawText(
-      formatRoundedNum(totalDiscount),
-      valueX + colWidths[8] - valWidth - 5,
-      y,
-      8,
-    );
-    y -= 12;
+    // TOTAL label (left of box)
+    drawText('TOTAL', totBoxX - 45, totRow1Y + 4, 8, boldFont);
 
-    drawText('QUOTATION TOTAL', labelX - 20, y, 9, boldFont);
-    valWidth = boldFont.widthOfTextAtSize(formatRoundedNum(finalTotal), 9);
-    drawText(
-      formatRoundedNum(finalTotal),
-      valueX + colWidths[8] - valWidth - 5,
-      y,
-      9,
-      boldFont,
-    );
+    // Gross Value total — right aligned in col 8
+    const gvStr = formatRoundedNum(totalGrossValue);
+    const gvW = font.widthOfTextAtSize(gvStr, 8);
+    drawText(gvStr, colX[9] - gvW - 2, totRow1Y + 4, 8);
 
-    y -= 20;
+    // Discount total — right aligned in col 10 (DISCOUNT column)
+    const discTotStr = `- ${formatRoundedNum(totalDiscount)}`;
+    const discTotW = font.widthOfTextAtSize(discTotStr, 8);
+    drawText(discTotStr, colX[11] - discTotW - 2, totRow1Y + 4, 8);
 
+    // Discounted Value total — right aligned in col 11
+    const dvStr = formatRoundedNum(totalDiscountedValue);
+    const dvW = font.widthOfTextAtSize(dvStr, 8);
+    drawText(dvStr, totBoxRight - dvW - 2, totRow1Y + 4, 8);
+
+    y = totRow1Y;
+
+    // ---- FURTHER DISCOUNT row ----
+    const totRow2Y = y - totRowH;
+    page.drawRectangle({
+      x: totBoxX,
+      y: totRow2Y,
+      width: totBoxWidth,
+      height: totRowH,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 0.5,
+    });
+    drawLine(colX[11], y, colX[11], totRow2Y);
+
+    const fdLabelStr = 'FURTHER DISCOUNT';
+    drawText(fdLabelStr, totBoxX + 4, totRow2Y + 4, 7, boldFont);
+
+    const fdStr = formatRoundedNum(furtherDiscount);
+    const fdW = font.widthOfTextAtSize(fdStr, 8);
+    drawText(fdStr, totBoxRight - fdW - 2, totRow2Y + 4, 8);
+
+    y = totRow2Y;
+
+    // ---- NET VALUE row ----
+    const totRow3Y = y - totRowH;
+    page.drawRectangle({
+      x: totBoxX,
+      y: totRow3Y,
+      width: totBoxWidth,
+      height: totRowH,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 0.5,
+    });
+    drawLine(colX[11], y, colX[11], totRow3Y);
+
+    drawText('NET VALUE', totBoxX + 4, totRow3Y + 4, 8, boldFont);
+
+    const nvStr = formatRoundedNum(finalTotal);
+    const nvW = boldFont.widthOfTextAtSize(nvStr, 9);
+    drawText(nvStr, totBoxRight - nvW - 2, totRow3Y + 4, 9, boldFont);
+
+    y = totRow3Y - 10;
+
+    y -= 10;
     drawText(
       `Amount in words: ${numberToWords(Math.round(finalTotal))}`,
       50,

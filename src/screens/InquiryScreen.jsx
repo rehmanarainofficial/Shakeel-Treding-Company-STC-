@@ -37,16 +37,23 @@ const InquiryScreen = ({ navigation }) => {
   const fetchData = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch(
-        `${API_URL}pending_quotation.php?_=${Date.now()}`,
-        {
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            Pragma: 'no-cache',
-            Expires: '0',
-          },
+      const formData = new FormData();
+      if (currentData?.id) {
+        formData.append('user_id', currentData.id);
+      }
+      if (currentData?.role_id) {
+        formData.append('role_id', currentData.role_id);
+      }
+
+      const response = await fetch(`${API_URL}pending_quotation.php`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
         },
-      );
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -77,7 +84,7 @@ const InquiryScreen = ({ navigation }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [currentData]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -163,7 +170,7 @@ const InquiryScreen = ({ navigation }) => {
       });
 
       const result = await response.json();
-      console.log('response', result);
+
       let headerData = null;
       let detailsData = [];
 

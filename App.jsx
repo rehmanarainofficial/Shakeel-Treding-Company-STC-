@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import Toast from 'react-native-toast-message';
 import { Store } from './src/store/store';
@@ -8,8 +8,18 @@ import { StatusBar } from 'react-native';
 import { Routes } from './src/routes/Routes';
 import { CartProvider } from './src/Context/CartContext';
 import { colors } from './src/utils/color';
+import {
+  startSessionWatcher,
+  stopSessionWatcher,
+} from './src/services/UserSessionService';
 
 const App = () => {
+  useEffect(() => {
+    startSessionWatcher();
+    return () => {
+      stopSessionWatcher();
+    };
+  }, []);
   return (
     <Provider store={Store}>
       <CartProvider>

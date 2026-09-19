@@ -11,6 +11,7 @@ import InquiryDetailsScreen from '../screens/InquiryDetailsScreen';
 import DailyDispatchScreen from '../screens/DailyDispatchScreen';
 import ReceivableReportScreen from '../screens/ReceivableReportScreen';
 import PendingIssueOrderScreen from '../screens/PendingIssueOrderScreen';
+import UserStatusScreen from '../screens/UserStatusScreen';
 import { colors } from '../utils/color';
 
 const Stack = createNativeStackNavigator();
@@ -85,6 +86,10 @@ export const Routes = () => {
           <Stack.Screen
             name="PendingIssueOrderScreen"
             component={PendingIssueOrderScreen}
+          />
+          <Stack.Screen
+            name="UserStatus"
+            component={UserStatusScreen}
           />
         </>
       ) : (

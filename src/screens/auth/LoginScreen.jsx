@@ -40,7 +40,7 @@ const LoginScreen = ({ navigation }) => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
   const loginUser = async () => {
     if (!username.trim()) {
@@ -66,19 +66,13 @@ const LoginScreen = ({ navigation }) => {
       const res = await dispatch(CurrentLogin({ config, username, password }));
       dispatch(setLoader(false));
 
-      if (res.payload) {
+      if (res.payload && !res.error) {
         Toast.show({
           type: 'success',
           text1: 'Login successful!',
           visibilityTime: 1500,
         });
         navigation.replace('MainTabs');
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Invalid credentials',
-          text2: 'Your username or password is incorrect',
-        });
       }
     } catch (err) {
       dispatch(setLoader(false));

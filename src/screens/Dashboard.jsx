@@ -12,13 +12,14 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import Icon2 from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../utils/color';
-import { useDispatch } from 'react-redux';
-import { setLogout } from '../store/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { logoutUser } from '../store/authSlice';
 import { useNavigation } from '@react-navigation/native';
 import { useCart } from '../Context/CartContext';
 const Dashboard = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const currentData = useSelector(state => state.Data.currentData);
   const { cartCount } = useCart();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -36,7 +37,7 @@ const Dashboard = () => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
   const dashboardCards = [
     {
@@ -131,7 +132,7 @@ const Dashboard = () => {
               styles.iconCircle,
               { backgroundColor: 'rgba(255,215,0,0.1)' },
             ]}
-            onPress={() => dispatch(setLogout())}
+            onPress={() => dispatch(logoutUser())}
           >
             <Icon2 name="logout" size={22} color="#FFD700" />
           </TouchableOpacity>
@@ -264,6 +265,45 @@ const Dashboard = () => {
             </View>
           </TouchableOpacity>
         </Animated.View>
+
+        {/* User Status (Only visible for role_id 2 / Superadmin) */}
+        {(Number(currentData?.role_id) === 2 ||
+          String(currentData?.role_id) === '2') && (
+          <Animated.View
+            style={[
+              styles.adminSection,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            <Text style={styles.sectionTitle}>User Management</Text>
+            <TouchableOpacity
+              style={styles.userStatusButton}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('UserStatus')}
+            >
+              <View style={styles.userStatusButtonContent}>
+                <View style={styles.userStatusIcon}>
+                  <Ionicons
+                    name="people"
+                    size={28}
+                    color={colors.primary}
+                  />
+                </View>
+                <View style={styles.userStatusTextContainer}>
+                  <Text style={styles.userStatusButtonText}>User Status</Text>
+                  <Text style={styles.userStatusSubText}>
+                    Manage login and active user status
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -512,6 +552,44 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 18,
     fontWeight: '600',
+  },
+  adminSection: {
+    paddingHorizontal: 20,
+    marginTop: 15,
+  },
+  userStatusButton: {
+    backgroundColor: colors.card,
+    borderRadius: 15,
+    padding: 16,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#3D352E',
+  },
+  userStatusButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userStatusIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(213, 155, 67, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  userStatusTextContainer: {
+    flex: 1,
+  },
+  userStatusButtonText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  userStatusSubText: {
+    color: colors.textSecondary,
+    fontSize: 12,
   },
   bottomPadding: {
     height: 30,

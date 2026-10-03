@@ -19,6 +19,7 @@ import CustomHeader from '../components/CustomHeader';
 import { colors } from '../utils/color';
 import { API_URL } from '@env';
 import { useNavigation } from '@react-navigation/native';
+import { isVersionOutdated } from '../utils/AppVersion';
 
 const UserStatusScreen = () => {
   const navigation = useNavigation();
@@ -84,14 +85,17 @@ const UserStatusScreen = () => {
       formData.append('inactive', String(user.inactive || '0'));
       formData.append('login_status', newStatus);
       formData.append('login_active_status', '0');
+      formData.append('app_version', String(user.app_version || ''));
 
-      const response = await axios.post(`${API_URL}logout_post.php`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const res = await fetch(`${API_URL}logout_post.php`, {
+        method: 'POST',
+        body: formData,
       });
+      const responseData = await res.json();
 
       if (
-        response.data &&
-        (response.data.status === 'true' || response.data.status === true)
+        responseData &&
+        (responseData.status === 'true' || responseData.status === true)
       ) {
         Toast.show({
           type: 'success',
@@ -110,7 +114,7 @@ const UserStatusScreen = () => {
         Toast.show({
           type: 'error',
           text1: 'Update Failed',
-          text2: response.data?.message || 'Could not update login status.',
+          text2: responseData?.message || 'Could not update login status.',
         });
       }
     } catch (error) {
@@ -157,14 +161,17 @@ const UserStatusScreen = () => {
       formData.append('inactive', newInactive);
       formData.append('login_status', String(user.login_status || '0'));
       formData.append('login_active_status', '1');
+      formData.append('app_version', String(user.app_version || ''));
 
-      const response = await axios.post(`${API_URL}logout_post.php`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const res = await fetch(`${API_URL}logout_post.php`, {
+        method: 'POST',
+        body: formData,
       });
+      const responseData = await res.json();
 
       if (
-        response.data &&
-        (response.data.status === 'true' || response.data.status === true)
+        responseData &&
+        (responseData.status === 'true' || responseData.status === true)
       ) {
         Toast.show({
           type: 'success',
@@ -183,7 +190,7 @@ const UserStatusScreen = () => {
         Toast.show({
           type: 'error',
           text1: 'Update Failed',
-          text2: response.data?.message || 'Could not update active status.',
+          text2: responseData?.message || 'Could not update active status.',
         });
       }
     } catch (error) {
@@ -277,6 +284,12 @@ const UserStatusScreen = () => {
     const isLogin = String(item.login_status) === '0';
     const isActive = String(item.inactive) === '0';
     const isUpdating = !!updatingIds[item.id];
+    const minRequiredVersion =
+      item.min_required_version || users[0]?.min_required_version || '1.1';
+    const isOutdated = isVersionOutdated(
+      item.app_version || '1.0',
+      minRequiredVersion,
+    );
 
     return (
       <View style={styles.userCard}>
@@ -318,7 +331,33 @@ const UserStatusScreen = () => {
               ) : null}
             </View>
 
-            <Text style={styles.usernameText}>@{item.user_id}</Text>
+            <View style={styles.userSubRow}>
+              <Text style={styles.usernameText}>@{item.user_id}</Text>
+              <View
+                style={[
+                  styles.versionBadge,
+                  isOutdated
+                    ? styles.versionBadgeOutdated
+                    : styles.versionBadgeLatest,
+                ]}
+              >
+                <Ionicons
+                  name={isOutdated ? 'alert-circle' : 'checkmark-circle'}
+                  size={11}
+                  color={isOutdated ? colors.danger : colors.success}
+                />
+                <Text
+                  style={[
+                    styles.versionBadgeText,
+                    isOutdated
+                      ? styles.versionTextOutdated
+                      : styles.versionTextLatest,
+                  ]}
+                >
+                  {item.app_version ? `v${item.app_version}` : 'v1.0 (Old)'}
+                </Text>
+              </View>
+            </View>
 
             <View style={styles.metaRow}>
               {item.phone ? (
@@ -710,7 +749,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     fontWeight: '500',
-    marginTop: 1,
+  },
+  userSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  versionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  versionBadgeLatest: {
+    backgroundColor: 'rgba(93, 193, 116, 0.12)',
+    borderColor: 'rgba(93, 193, 116, 0.3)',
+  },
+  versionBadgeOutdated: {
+    backgroundColor: 'rgba(233, 77, 59, 0.12)',
+    borderColor: 'rgba(233, 77, 59, 0.3)',
+  },
+  versionBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  versionTextLatest: {
+    color: colors.success,
+  },
+  versionTextOutdated: {
+    color: colors.danger,
   },
   metaRow: {
     flexDirection: 'row',

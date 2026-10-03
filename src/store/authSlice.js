@@ -3,6 +3,7 @@ import axios from 'axios';
 import Toast from 'react-native-toast-message';
 import CryptoJS from 'crypto-js';
 import { API_URL } from '@env';
+import { APP_VERSION, isVersionOutdated } from '../utils/AppVersion';
 
 export const CurrentLogin = createAsyncThunk(
   'user/login',
@@ -45,7 +46,22 @@ export const CurrentLogin = createAsyncThunk(
           return rejectWithValue('User account is inactive');
         }
 
-        // 2. Check single active session: only one user/device logged in at a time
+        // 2. Check min_required_version from API vs running app version
+        const minRequiredVersion =
+          user.min_required_version ||
+          response?.data?.min_required_version ||
+          '1.1';
+        if (isVersionOutdated(APP_VERSION, minRequiredVersion)) {
+          Toast.show({
+            type: 'error',
+            text1: 'Update Required',
+            text2: `A new version (v${minRequiredVersion}) of STC is required. You are using v${APP_VERSION}. Please install the latest APK.`,
+            visibilityTime: 5000,
+          });
+          return rejectWithValue('App version is outdated');
+        }
+
+        // 3. Check single active session: only one user/device logged in at a time
         if (String(user.login_status) === '0') {
           Toast.show({
             type: 'error',
@@ -57,23 +73,26 @@ export const CurrentLogin = createAsyncThunk(
           return rejectWithValue('Account is already logged in on another device');
         }
 
-        // 3. Mark login_status as '0' (Logged In) on the server
+        // 4. Mark login_status as '0' (Logged In) and update app_version on the server
         try {
           const formData = new FormData();
           formData.append('id', String(user.id));
           formData.append('inactive', String(user.inactive || '0'));
           formData.append('login_status', '0');
           formData.append('login_active_status', '0');
+          formData.append('app_version', APP_VERSION);
 
-          await axios.post(`${API_URL}logout_post.php`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            timeout: 8000,
+          const postRes = await fetch(`${API_URL}logout_post.php`, {
+            method: 'POST',
+            body: formData,
           });
+          const postResult = await postRes.text();
+          console.log('logout_post response on login:', postResult);
         } catch (postErr) {
           console.log('Error updating login status on server:', postErr);
         }
 
-        return { ...user, login_status: '0', inactive: '0' };
+        return { ...user, login_status: '0', inactive: '0', app_version: APP_VERSION };
       } else {
         Toast.show({
           type: 'error',
@@ -105,11 +124,14 @@ export const logoutUser = createAsyncThunk(
         formData.append('inactive', String(currentData.inactive || '0'));
         formData.append('login_status', '1');
         formData.append('login_active_status', '0');
+        formData.append('app_version', APP_VERSION);
 
-        await axios.post(`${API_URL}logout_post.php`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: 5000,
+        const postRes = await fetch(`${API_URL}logout_post.php`, {
+          method: 'POST',
+          body: formData,
         });
+        const postResult = await postRes.text();
+        console.log('logout_post response on logout:', postResult);
       } catch (err) {
         console.log('Error updating logout status on server:', err);
       }

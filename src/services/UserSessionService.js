@@ -5,6 +5,7 @@ import Toast from 'react-native-toast-message';
 import { API_URL } from '@env';
 import { Store } from '../store/store';
 import { setLogout } from '../store/authSlice';
+import { APP_VERSION, isVersionOutdated } from '../utils/AppVersion';
 
 let sessionCheckInterval = null;
 let appStateSubscription = null;
@@ -52,10 +53,11 @@ export const logoutUserManually = async () => {
       formData.append('inactive', String(currentData.inactive || '0'));
       formData.append('login_status', '1');
       formData.append('login_active_status', '0');
+      formData.append('app_version', APP_VERSION);
 
-      await axios.post(`${API_URL}logout_post.php`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 5000,
+      await fetch(`${API_URL}logout_post.php`, {
+        method: 'POST',
+        body: formData,
       });
     } catch (err) {
       console.log('Error notifying server on manual logout:', err);
@@ -107,6 +109,18 @@ export const validateCurrentUserSession = async () => {
         await performCompleteLogout(
           'Account Deactivated',
           'Your account has been deactivated by administrator.',
+        );
+        return;
+      }
+
+      const minRequiredVersion =
+        matchedUser.min_required_version ||
+        response?.data?.min_required_version ||
+        '1.1';
+      if (isVersionOutdated(APP_VERSION, minRequiredVersion)) {
+        await performCompleteLogout(
+          'Update Required',
+          `A new version (v${minRequiredVersion}) of STC is required. You are using v${APP_VERSION}. Please install the latest APK.`,
         );
         return;
       }

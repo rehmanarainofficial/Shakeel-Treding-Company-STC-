@@ -79,7 +79,12 @@ const ScannerScreen = () => {
     setAlertConfig({
       title,
       message,
-      onConfirm: onConfirm || (() => setShowCustomAlert(false)),
+      onConfirm: () => {
+        setShowCustomAlert(false);
+        if (typeof onConfirm === 'function') {
+          onConfirm();
+        }
+      },
     });
     setShowCustomAlert(true);
   }, []);
@@ -309,23 +314,17 @@ const ScannerScreen = () => {
   }, []);
 
   const handleManualInputChange = useCallback(text => {
-    const numbersOnly = text.replace(/[^\d]/g, '');
-    if (numbersOnly.length > 7) return;
-
-    if (numbersOnly.length > 3) {
-      setManualInput(numbersOnly.slice(0, 3) + '-' + numbersOnly.slice(3));
-    } else {
-      setManualInput(numbersOnly);
-    }
+    setManualInput(text);
   }, []);
 
   const handleManualSubmit = useCallback(() => {
-    if (manualInput.match(/^\d{3}-\d{4}$/)) {
-      fetchProductData(manualInput, 'manual');
+    const trimmedInput = manualInput.trim();
+    if (trimmedInput.length > 0) {
+      fetchProductData(trimmedInput, 'manual');
     } else {
       showCustomAlertModal(
-        'Invalid Format',
-        'Please enter exactly 7 digits in format: 803-1333\n\nFirst 3 digits + hyphen + last 4 digits',
+        'Invalid Input',
+        'Please enter a stock ID to search.',
       );
     }
   }, [manualInput, fetchProductData, showCustomAlertModal]);
@@ -421,7 +420,12 @@ const ScannerScreen = () => {
             <Text style={styles.alertMessage}>{alertConfig.message}</Text>
             <TouchableOpacity
               style={styles.alertButton}
-              onPress={alertConfig.onConfirm}
+              onPress={() => {
+                setShowCustomAlert(false);
+                if (typeof alertConfig.onConfirm === 'function') {
+                  alertConfig.onConfirm();
+                }
+              }}
             >
               <Text style={styles.alertButtonText}>OK</Text>
             </TouchableOpacity>
@@ -609,9 +613,7 @@ const ScannerScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalSubtitle}>
-              Search by Stock ID (Format: 803-1333)
-            </Text>
+            <Text style={styles.modalSubtitle}>Search by Stock ID</Text>
 
             {/* Stock ID Search Input */}
             <View style={styles.searchContainer}>
@@ -628,8 +630,6 @@ const ScannerScreen = () => {
                 placeholderTextColor={colors.textSecondary}
                 value={manualInput}
                 onChangeText={handleManualInputChange}
-                keyboardType="number-pad"
-                maxLength={8}
                 autoFocus={true}
                 returnKeyType="search"
                 onSubmitEditing={handleManualSubmit}
@@ -649,11 +649,11 @@ const ScannerScreen = () => {
             <TouchableOpacity
               style={[
                 styles.searchButton,
-                (!manualInput.match(/^\d{3}-\d{4}$/) || searchLoading) &&
+                (!manualInput.trim() || searchLoading) &&
                   styles.searchButtonDisabled,
               ]}
               onPress={handleManualSubmit}
-              disabled={!manualInput.match(/^\d{3}-\d{4}$/) || searchLoading}
+              disabled={!manualInput.trim() || searchLoading}
             >
               {searchLoading ? (
                 <ActivityIndicator size="small" color={colors.text} />

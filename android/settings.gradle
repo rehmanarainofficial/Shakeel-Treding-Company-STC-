@@ -1,28 +1,6 @@
 pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
 plugins { id("com.facebook.react.settings") }
-def appRoot = file('..')
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex ->
-    ex.autolinkLibrariesFromCommand(
-        ["npx", "@react-native-community/cli", "config"],
-        appRoot,
-        files(
-            "${appRoot}/yarn.lock",
-            "${appRoot}/package-lock.json",
-            "${appRoot}/package.json",
-            "${appRoot}/react-native.config.js",
-            "settings.gradle"
-        )
-    )
-}
-def oldProjectRoot = '/Users/abdulrehman/Documents/Shakeel-Treding-Company-STC-'
-def currentProjectRoot = rootDir.parentFile.absolutePath
-rootProject.children.each { projectDescriptor ->
-    if (projectDescriptor.projectDir.absolutePath.startsWith(oldProjectRoot)) {
-        projectDescriptor.projectDir = new File(
-            projectDescriptor.projectDir.absolutePath.replace(oldProjectRoot, currentProjectRoot)
-        )
-    }
-}
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
 rootProject.name = 'shakeel_tiles'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')

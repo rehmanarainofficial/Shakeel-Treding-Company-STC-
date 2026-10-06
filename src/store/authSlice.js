@@ -10,12 +10,13 @@ export const CurrentLogin = createAsyncThunk(
   async ({ config, username, password }, { rejectWithValue }) => {
     try {
       const response = await axios(config);
-      if (response?.data?.status === 'true' || response?.data?.status === true) {
+      if (response?.data?.status === 'true') {
         const user = response?.data?.data?.find(
           u =>
             String(u.user_id).trim().toLowerCase() ===
             String(username).trim().toLowerCase(),
         );
+        
 
         if (!user) {
           Toast.show({
@@ -47,10 +48,7 @@ export const CurrentLogin = createAsyncThunk(
         }
 
         // 2. Check min_required_version from API vs running app version
-        const minRequiredVersion =
-          user.min_required_version ||
-          response?.data?.min_required_version ||
-          '1.1';
+        const minRequiredVersion = user.min_required_version ;
         if (isVersionOutdated(APP_VERSION, minRequiredVersion)) {
           Toast.show({
             type: 'error',
@@ -77,7 +75,7 @@ export const CurrentLogin = createAsyncThunk(
         try {
           const formData = new FormData();
           formData.append('id', String(user.id));
-          formData.append('inactive', String(user.inactive || '0'));
+          formData.append('inactive', String(user.inactive));
           formData.append('login_status', '0');
           formData.append('login_active_status', '0');
           formData.append('app_version', APP_VERSION);
@@ -86,7 +84,7 @@ export const CurrentLogin = createAsyncThunk(
             method: 'POST',
             body: formData,
           });
-          const postResult = await postRes.text();
+          const postResult = await postRes.json();
           console.log('logout_post response on login:', postResult);
         } catch (postErr) {
           console.log('Error updating login status on server:', postErr);
@@ -130,7 +128,7 @@ export const logoutUser = createAsyncThunk(
           method: 'POST',
           body: formData,
         });
-        const postResult = await postRes.text();
+        const postResult = await postRes.json();
         console.log('logout_post response on logout:', postResult);
       } catch (err) {
         console.log('Error updating logout status on server:', err);

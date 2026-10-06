@@ -305,12 +305,8 @@ const ScannerScreen = () => {
   );
 
   const extractStockId = useCallback(scannedData => {
-    const stockIdPattern = /\b\d{3}-\d{4}\b/;
-    const match = scannedData.match(stockIdPattern);
-    if (match) return match[0];
-    if (scannedData.length === 8 && scannedData.includes('-'))
-      return scannedData;
-    return null;
+    if (!scannedData) return null;
+    return String(scannedData).trim();
   }, []);
 
   const handleManualInputChange = useCallback(text => {
@@ -359,7 +355,16 @@ const ScannerScreen = () => {
   );
 
   const codeScanner = useCodeScanner({
-    codeTypes: ['qr', 'code-128', 'ean-13'],
+    codeTypes: [
+      'qr',
+      'code-128',
+      'code-39',
+      'code-93',
+      'ean-13',
+      'ean-8',
+      'upc-a',
+      'upc-e',
+    ],
     onCodeScanned: useCallback(
       codes => {
         if (codes[0]?.value && isScanning && !loading && hasPermission) {
@@ -374,8 +379,8 @@ const ScannerScreen = () => {
             fetchProductData(stockId, 'scan');
           } else {
             showCustomAlertModal(
-              'Invalid QR Code',
-              'Scanned QR code does not contain a valid product ID format.',
+              'Invalid Code',
+              'Scanned barcode or QR code is empty.',
               () => setTimeout(() => setIsScanning(true), 1500),
             );
           }
